@@ -20,8 +20,9 @@
     opacity: .10 !important;
     filter: grayscale(1) !important;
 }
-.rc-watched-card.rc-watched:hover > :not(.rc-watch-toggle),
-.rc-watched-card.rc-watched:focus-within > :not(.rc-watch-toggle) {
+/* Reading a poster/title may restore it; the watched action must not mask its
+   own result. Mouse focus on that action also must not keep the card bright. */
+.rc-watched-card.rc-watched:has(> :not(.rc-watch-toggle):hover, a:focus-visible) > :not(.rc-watch-toggle) {
     opacity: 1 !important;
     filter: none !important;
 }
@@ -49,7 +50,7 @@
     transform: none;
 }
 .rc-watched-card:hover > .rc-watch-toggle,
-.rc-watched-card:focus-within > .rc-watch-toggle {
+.rc-watched-card:has(:focus-visible) > .rc-watch-toggle {
     opacity: .9;
     pointer-events: auto;
 }

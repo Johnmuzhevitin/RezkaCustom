@@ -11,6 +11,7 @@
     --rc-card-type-line: 18px;
     --rc-card-poster-gap: 12px;
     --rc-card-text-gap: 6px;
+    --rc-card-column-gap: 16px;
     --rc-card-row-gap: 28px;
 }
 :host([data-theme="dark"]), body.r4-style.b-theme__template__night {
@@ -50,10 +51,25 @@ body.r4-style .b-content__inline_items .b-content__inline_item .cat .entity,
     margin: var(--rc-card-poster-gap) 0 var(--rc-card-text-gap);
 }
 :host .card p.episode { color: var(--rc-card-ink); }
-:host .cards { row-gap: var(--rc-card-row-gap); }
+:host .cards { gap: var(--rc-card-row-gap) var(--rc-card-column-gap); }
 
+/* Replace the legacy inline-block gutters and distributed fixed-width tracks.
+   166px is the site's native poster width; flexible tracks keep every row full. */
+body.r4-style .b-content__inline_inner {
+    margin-left: 0;
+}
+body.r4-style .b-content__inline_items {
+    grid-template-columns: repeat(auto-fill, minmax(166px, 1fr));
+    gap: var(--rc-card-row-gap) var(--rc-card-column-gap);
+    justify-content: start;
+    padding: 0;
+}
 body.r4-style .b-content__inline_items .b-content__inline_item {
-    margin-bottom: var(--rc-card-row-gap);
+    width: auto;
+    min-width: 0;
+    margin: 0;
+    /* The upstream full-width catalogue sets this margin with !important. */
+    margin-left: 0 !important;
 }
 body.r4-style .b-content__inline_items .b-content__inline_item-link {
     padding: var(--rc-card-text-gap) 0 0;
