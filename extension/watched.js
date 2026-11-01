@@ -16,7 +16,7 @@ const RezkaWatched = (() => {
         try {
             const url = new URL(href, location.origin);
             if (!RezkaNetwork.isSite(url.href) || url.username || url.password) return null;
-            return url.pathname.match(/^\/(?:films|series|cartoons|animation)\/[^/]+\/(\d+)-[^/]+\.html$/)?.[1] || null;
+            return url.pathname.match(/^\/(?:films|series|cartoons|animation|show)\/[^/]+\/(\d+)-[^/]+\.html$/)?.[1] || null;
         } catch { return null; }
     }
     function readList(doc) {
