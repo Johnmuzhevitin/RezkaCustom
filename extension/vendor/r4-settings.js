@@ -63,6 +63,9 @@ GM.xmlHttpRequest = R4_xmlHttpRequest;
 
 function R4Settings(options = {}) {
 
+    const configs = new Map();
+    const applied = new Map();
+    const initialization = new Map();
     const utils = R4Utils();
     const images = R4Images();
 
@@ -401,7 +404,6 @@ function R4Settings(options = {}) {
         }
 
         const option = getDefaultOption(config);
-        await setCongigSetting(config, option);
         return option;
     }
 
@@ -475,6 +477,7 @@ function R4Settings(options = {}) {
 
     async function initSetting(config) {
         const currentOption = await getCurrentOption(config);
+        applied.set(config.name, currentOption);
         afterStart(() => {
             setBodyClass(config, currentOption);
         });
@@ -804,7 +807,9 @@ function R4Settings(options = {}) {
             }
         }
 
-        initSetting(config);
+        configs.set(config.name, config);
+        initialization.set(config.name, initSetting(config));
+        RezkaSettings.registerCountry(config);
         
         const originalHandler = config.handler;
         config.handler = async (event) => {
@@ -905,6 +910,7 @@ function R4Settings(options = {}) {
     }
 
     return {
+        ...RezkaSettings.attach({ configs, applied, initialization, setBodyClass, afterStart, afterEnd }),
         tumbler: elements.tumbler,
         buildTumblerSetting,
         createTumblerSetting,

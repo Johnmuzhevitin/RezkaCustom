@@ -58,9 +58,3 @@ const GM = (() => {
     };
 })();
 
-chrome.runtime.onMessage.addListener((message, sender, respond) => {
-    if (message?.type !== "rezka:settings") return;
-    const toggle = document.querySelector(".r4-tumbler-settings");
-    toggle?.click();
-    respond({ opened: !!toggle });
-});

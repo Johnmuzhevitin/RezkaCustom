@@ -6,7 +6,7 @@
 - Source: https://greasyfork.org/scripts/425494-hdrezka-improvement
 - The baseline was supplied by the user from their installed Tampermonkey script.
 - The source metadata declares **MIT**. The license text is included in `licenses/HDrezka-Improvement-MIT.txt`.
-- Adaptations: extension API compatibility, a fixed player-command bridge, a hostname guard, and removal of the userscript-update entry point. Original feature code and wording are otherwise retained.
+- Adaptations: extension API compatibility, a fixed player-command bridge, a hostname guard, removal of the userscript-update entry point, and the version 0.2 browser-popup settings interface. Feature implementations and stored option values are retained; popup labels are rewritten for clarity.
 
 ## Bundled R4 libraries
 
@@ -21,8 +21,8 @@ These files were downloaded from the exact pinned `@require` URLs in that baseli
 
 The library headers do not declare a license. The R4 Images and R4 Settings listing pages show their author as **Oleksii Smith** and their license as **N/A**. This project does **not** claim that the main userscript's MIT declaration automatically licenses those separate libraries or their embedded font/image assets. Clarify their redistribution terms before publishing or distributing this bundle to other users. They are included here to reproduce the user's existing local installation.
 
-The unused `executeLocation` implementation is removed from the shipped R4 Utils copy. Unmodified copies of all four dependencies and their hashes remain in the project under `upstream/`.
+The unused `executeLocation` implementation is removed from the shipped R4 Utils copy. The unused subtitle icon is removed from the shipped R4 Images copy. R4 Settings is instrumented with a configuration registry and lifecycle state so the side panel can reuse existing feature callbacks. Its legacy UI remains detached from the site. Unmodified copies of all four dependencies and their hashes remain in the project under `upstream/`.
 
 ## External services
 
-OpenSubtitles integration retains the application key embedded in the supplied public script, for parity with that installation. It is not a user password. No claim is made to ownership of that key. A separate registered application/key should be arranged for an independently distributed release. The extension has no affiliation with HDrezka, Tampermonkey, IMDb or OpenSubtitles.
+OpenSubtitles integration and its application key are not included in the shipped extension as of 0.3.1. They remain only in the pinned upstream input for provenance. The extension has no affiliation with HDrezka, Tampermonkey or IMDb.

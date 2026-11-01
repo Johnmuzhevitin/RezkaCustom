@@ -17,8 +17,7 @@ const RezkaNetwork = (() => {
             if (!["http:", "https:"].includes(url.protocol)) return false;
             if (url.origin === new URL(source).origin) return true;
             if (url.protocol !== "https:") return false;
-            return url.hostname === "api.opensubtitles.com"
-                || url.hostname === "imdb.com" || url.hostname.endsWith(".imdb.com");
+            return url.hostname === "imdb.com" || url.hostname.endsWith(".imdb.com");
         } catch { return false; }
     }
     return { isSite, allowed };

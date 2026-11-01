@@ -5,7 +5,7 @@
         || !(location.hostname.includes("rezka")
             || ["rezkify.com", "rezkery.com", "kinopub.me"].includes(location.hostname))) return;
     const commands = new Set([
-        "play", "pause", "stop", "volume", "time", "duration", "seek", "subtitle",
+        "play", "pause", "stop", "volume", "time", "duration", "seek",
         "fullscreen", "exitfullscreen", "muted", "mute", "unmute", "poster", "update:vast"
     ]);
     document.addEventListener("rezka-custom:player-request", event => {
