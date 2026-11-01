@@ -1,0 +1,378 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-01T01:26:23.514Z",
+  "title": "Design System: Rezka Custom",
+  "extensions": {
+    "shadows": [
+      {
+        "name": "selection",
+        "value": "0 1px 3px #222a3b14",
+        "purpose": "Selected tabs and radio options only."
+      }
+    ],
+    "motion": [
+      {
+        "name": "switch-state",
+        "value": "150ms ease",
+        "purpose": "Track color and thumb position; disabled with reduced motion."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "narrow-panel",
+        "value": "(max-width:350px)"
+      },
+      {
+        "name": "short-panel",
+        "value": "(max-height:480px)"
+      },
+      {
+        "name": "coarse-pointer",
+        "value": "(pointer:coarse)"
+      }
+    ],
+    "colorMeta": {
+      "canvas": {
+        "role": "neutral",
+        "displayName": "Cool canvas",
+        "tonalRamp": [
+          "oklch(15% 0.00216 264.53)",
+          "oklch(26% 0.00374 264.53)",
+          "oklch(37% 0.00532 264.53)",
+          "oklch(48% 0.00575 264.53)",
+          "oklch(59% 0.00575 264.53)",
+          "oklch(70% 0.00575 264.53)",
+          "oklch(82% 0.00345 264.53)",
+          "oklch(95% 0.00096 264.53)"
+        ]
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "White surface",
+        "tonalRamp": [
+          "oklch(15% 0.00000 0.00)",
+          "oklch(26% 0.00000 0.00)",
+          "oklch(37% 0.00000 0.00)",
+          "oklch(48% 0.00000 0.00)",
+          "oklch(59% 0.00000 0.00)",
+          "oklch(70% 0.00000 0.00)",
+          "oklch(82% 0.00000 0.00)",
+          "oklch(95% 0.00000 0.00)"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Primary ink",
+        "tonalRamp": [
+          "oklch(15% 0.01252 264.86)",
+          "oklch(26% 0.02171 264.86)",
+          "oklch(37% 0.03089 264.86)",
+          "oklch(48% 0.03339 264.86)",
+          "oklch(59% 0.03339 264.86)",
+          "oklch(70% 0.03339 264.86)",
+          "oklch(82% 0.02004 264.86)",
+          "oklch(95% 0.00557 264.86)"
+        ]
+      },
+      "muted": {
+        "role": "neutral",
+        "displayName": "Muted supporting ink",
+        "tonalRamp": [
+          "oklch(15% 0.01395 259.95)",
+          "oklch(26% 0.02418 259.95)",
+          "oklch(37% 0.03441 259.95)",
+          "oklch(48% 0.03720 259.95)",
+          "oklch(59% 0.03720 259.95)",
+          "oklch(70% 0.03720 259.95)",
+          "oklch(82% 0.02232 259.95)",
+          "oklch(95% 0.00620 259.95)"
+        ]
+      },
+      "accent": {
+        "role": "primary",
+        "displayName": "Indigo accent",
+        "tonalRamp": [
+          "oklch(15% 0.05992 271.50)",
+          "oklch(26% 0.10386 271.50)",
+          "oklch(37% 0.14780 271.50)",
+          "oklch(48% 0.15978 271.50)",
+          "oklch(59% 0.15978 271.50)",
+          "oklch(70% 0.15978 271.50)",
+          "oklch(82% 0.09587 271.50)",
+          "oklch(95% 0.02663 271.50)"
+        ]
+      },
+      "accent-hover": {
+        "role": "primary",
+        "displayName": "Indigo hover",
+        "tonalRamp": [
+          "oklch(15% 0.05711 271.23)",
+          "oklch(26% 0.09899 271.23)",
+          "oklch(37% 0.14088 271.23)",
+          "oklch(48% 0.15230 271.23)",
+          "oklch(59% 0.15230 271.23)",
+          "oklch(70% 0.15230 271.23)",
+          "oklch(82% 0.09138 271.23)",
+          "oklch(95% 0.02538 271.23)"
+        ]
+      },
+      "line": {
+        "role": "neutral",
+        "displayName": "Quiet divider",
+        "tonalRamp": [
+          "oklch(15% 0.00501 262.38)",
+          "oklch(26% 0.00868 262.38)",
+          "oklch(37% 0.01236 262.38)",
+          "oklch(48% 0.01336 262.38)",
+          "oklch(59% 0.01336 262.38)",
+          "oklch(70% 0.01336 262.38)",
+          "oklch(82% 0.00802 262.38)",
+          "oklch(95% 0.00223 262.38)"
+        ]
+      },
+      "control-border": {
+        "role": "neutral",
+        "displayName": "Control boundary",
+        "tonalRamp": [
+          "oklch(15% 0.01416 263.44)",
+          "oklch(26% 0.02455 263.44)",
+          "oklch(37% 0.03493 263.44)",
+          "oklch(48% 0.03777 263.44)",
+          "oklch(59% 0.03777 263.44)",
+          "oklch(70% 0.03777 263.44)",
+          "oklch(82% 0.02266 263.44)",
+          "oklch(95% 0.00629 263.44)"
+        ]
+      },
+      "control-off": {
+        "role": "neutral",
+        "displayName": "Inactive switch",
+        "tonalRamp": [
+          "oklch(15% 0.01416 263.44)",
+          "oklch(26% 0.02455 263.44)",
+          "oklch(37% 0.03493 263.44)",
+          "oklch(48% 0.03777 263.44)",
+          "oklch(59% 0.03777 263.44)",
+          "oklch(70% 0.03777 263.44)",
+          "oklch(82% 0.02266 263.44)",
+          "oklch(95% 0.00629 263.44)"
+        ]
+      },
+      "subtle-surface": {
+        "role": "neutral",
+        "displayName": "Subtle rail surface",
+        "tonalRamp": [
+          "oklch(15% 0.00389 261.79)",
+          "oklch(26% 0.00675 261.79)",
+          "oklch(37% 0.00960 261.79)",
+          "oklch(48% 0.01038 261.79)",
+          "oklch(59% 0.01038 261.79)",
+          "oklch(70% 0.01038 261.79)",
+          "oklch(82% 0.00623 261.79)",
+          "oklch(95% 0.00173 261.79)"
+        ]
+      },
+      "hover-surface": {
+        "role": "neutral",
+        "displayName": "Neutral hover surface",
+        "tonalRamp": [
+          "oklch(15% 0.00484 266.70)",
+          "oklch(26% 0.00839 266.70)",
+          "oklch(37% 0.01193 266.70)",
+          "oklch(48% 0.01290 266.70)",
+          "oklch(59% 0.01290 266.70)",
+          "oklch(70% 0.01290 266.70)",
+          "oklch(82% 0.00774 266.70)",
+          "oklch(95% 0.00215 266.70)"
+        ]
+      },
+      "success": {
+        "role": "success",
+        "displayName": "Success green",
+        "tonalRamp": [
+          "oklch(15% 0.02867 169.83)",
+          "oklch(26% 0.04969 169.83)",
+          "oklch(37% 0.07071 169.83)",
+          "oklch(48% 0.07645 169.83)",
+          "oklch(59% 0.07645 169.83)",
+          "oklch(70% 0.07645 169.83)",
+          "oklch(82% 0.04587 169.83)",
+          "oklch(95% 0.01274 169.83)"
+        ]
+      },
+      "notice-ink": {
+        "role": "info",
+        "displayName": "Information ink",
+        "tonalRamp": [
+          "oklch(15% 0.03417 268.82)",
+          "oklch(26% 0.05923 268.82)",
+          "oklch(37% 0.08430 268.82)",
+          "oklch(48% 0.09113 268.82)",
+          "oklch(59% 0.09113 268.82)",
+          "oklch(70% 0.09113 268.82)",
+          "oklch(82% 0.05468 268.82)",
+          "oklch(95% 0.01519 268.82)"
+        ]
+      },
+      "notice-surface": {
+        "role": "info",
+        "displayName": "Information surface",
+        "tonalRamp": [
+          "oklch(15% 0.00639 267.79)",
+          "oklch(26% 0.01107 267.79)",
+          "oklch(37% 0.01575 267.79)",
+          "oklch(48% 0.01703 267.79)",
+          "oklch(59% 0.01703 267.79)",
+          "oklch(70% 0.01703 267.79)",
+          "oklch(82% 0.01022 267.79)",
+          "oklch(95% 0.00284 267.79)"
+        ]
+      },
+      "error-ink": {
+        "role": "error",
+        "displayName": "Error ink",
+        "tonalRamp": [
+          "oklch(15% 0.05229 20.02)",
+          "oklch(26% 0.09064 20.02)",
+          "oklch(37% 0.12898 20.02)",
+          "oklch(48% 0.13944 20.02)",
+          "oklch(59% 0.13944 20.02)",
+          "oklch(70% 0.13944 20.02)",
+          "oklch(82% 0.08366 20.02)",
+          "oklch(95% 0.02324 20.02)"
+        ]
+      },
+      "error-surface": {
+        "role": "error",
+        "displayName": "Error surface",
+        "tonalRamp": [
+          "oklch(15% 0.00789 6.61)",
+          "oklch(26% 0.01367 6.61)",
+          "oklch(37% 0.01945 6.61)",
+          "oklch(48% 0.02103 6.61)",
+          "oklch(59% 0.02103 6.61)",
+          "oklch(70% 0.02103 6.61)",
+          "oklch(82% 0.01262 6.61)",
+          "oklch(95% 0.00351 6.61)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "headline": {
+        "displayName": "Section heading",
+        "purpose": "Section headings and the credited percentage in the current MyShows episode."
+      },
+      "title": {
+        "displayName": "Panel title",
+        "purpose": "Panel and empty-state headings, including the current episode name."
+      },
+      "body": {
+        "displayName": "Settings text",
+        "purpose": "Settings labels, values and compact interface text."
+      },
+      "label": {
+        "displayName": "Control label",
+        "purpose": "Semibold setting names and action labels."
+      },
+      "supporting": {
+        "displayName": "Supporting text",
+        "purpose": "Explanations, navigation, status, journal metadata and confirmation seconds."
+      },
+      "brand": {
+        "displayName": "Product name",
+        "purpose": "Rezka Custom in the panel header, combining regular and semibold."
+      }
+    }
+  },
+  "components": [
+    {
+      "name": "Reload action",
+      "kind": "button",
+      "refersTo": "button-reload",
+      "description": "Explicitly reload the current page when a setting requires it. Static style specimen.",
+      "html": "<div class=\"ds-specimen\"><button class=\"ds-reload\" type=\"button\">Обновить страницу</button></div>",
+      "css": ".ds-specimen { font-family:var(--font-family, \"Segoe UI Variable\", \"Segoe UI\", system-ui, sans-serif); font-size:var(--text-body, .8125rem); line-height:1.5; color:var(--ink, #222a3b); }\n:where(.ds-specimen button, .ds-specimen input) { font:inherit; color:inherit; }\n.ds-specimen button { cursor:pointer; }\n.ds-specimen button:disabled, .ds-specimen input:disabled { opacity:.65; cursor:default; }\n.ds-specimen :focus-visible { outline:2px solid var(--accent, #4b5fc5); outline-offset:3px; }\n.ds-specimen ::selection { background:var(--accent, #4b5fc5); color:var(--surface, #ffffff); }\n@media (forced-colors:active) { .ds-specimen :focus-visible { outline-color:Highlight; } }\n.ds-reload { border:0; background:var(--accent, #4b5fc5); color:var(--surface, #ffffff); font-weight:600; border-radius:6px; min-height:44px; padding:7px 10px; }\n.ds-reload:hover { background:var(--accent-hover, #3d4fae); }"
+    },
+    {
+      "name": "Text action",
+      "kind": "button",
+      "description": "Clear a search while keeping keyboard focus available. Static style specimen.",
+      "html": "<div class=\"ds-specimen\"><button class=\"ds-text-button\" type=\"button\">Очистить поиск</button></div>",
+      "css": ".ds-specimen { font-family:var(--font-family, \"Segoe UI Variable\", \"Segoe UI\", system-ui, sans-serif); font-size:var(--text-body, .8125rem); line-height:1.5; color:var(--ink, #222a3b); }\n:where(.ds-specimen button, .ds-specimen input) { font:inherit; color:inherit; }\n.ds-specimen button { cursor:pointer; }\n.ds-specimen button:disabled, .ds-specimen input:disabled { opacity:.65; cursor:default; }\n.ds-specimen :focus-visible { outline:2px solid var(--accent, #4b5fc5); outline-offset:3px; }\n.ds-specimen ::selection { background:var(--accent, #4b5fc5); color:var(--surface, #ffffff); }\n@media (forced-colors:active) { .ds-specimen :focus-visible { outline-color:Highlight; } }\n.ds-text-button { background:none; border:0; min-height:44px; padding:8px 4px; color:var(--accent, #4b5fc5); text-underline-offset:3px; }\n.ds-text-button:hover { text-decoration:underline; }"
+    },
+    {
+      "name": "Search field",
+      "kind": "input",
+      "refersTo": "search-field",
+      "description": "Search settings, or the entire journal while MyShows is selected. The shortcut is a hint in this style specimen.",
+      "html": "<div class=\"ds-specimen\"><label class=\"ds-search-box\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><circle cx=\"10.5\" cy=\"10.5\" r=\"6.5\"/><path d=\"m16 16 4.5 4.5\"/></svg><input type=\"search\" aria-label=\"Найти настройку\" placeholder=\"Найти настройку\" autocomplete=\"off\"><kbd aria-hidden=\"true\">Ctrl F</kbd></label></div>",
+      "css": ".ds-specimen { font-family:var(--font-family, \"Segoe UI Variable\", \"Segoe UI\", system-ui, sans-serif); font-size:var(--text-body, .8125rem); line-height:1.5; color:var(--ink, #222a3b); }\n:where(.ds-specimen button, .ds-specimen input) { font:inherit; color:inherit; }\n.ds-specimen button { cursor:pointer; }\n.ds-specimen button:disabled, .ds-specimen input:disabled { opacity:.65; cursor:default; }\n.ds-specimen :focus-visible { outline:2px solid var(--accent, #4b5fc5); outline-offset:3px; }\n.ds-specimen ::selection { background:var(--accent, #4b5fc5); color:var(--surface, #ffffff); }\n@media (forced-colors:active) { .ds-specimen :focus-visible { outline-color:Highlight; } }\n.ds-search-box { display:flex; align-items:center; gap:8px; margin:0; min-height:40px; padding:8px 10px; border:1px solid var(--control-border, #77839a); border-radius:var(--radius-control, 8px); background:var(--surface, #ffffff); color:var(--muted, #58657a); }\n.ds-search-box:focus-within { outline:2px solid var(--accent, #4b5fc5); outline-offset:2px; }\n.ds-search-box svg { width:16px; height:16px; }\n.ds-search-box input { width:100%; min-width:0; padding:0; border:0; background:none; outline:none; }\n.ds-search-box input::placeholder { color:var(--muted, #58657a); opacity:1; }\n.ds-search-box kbd { flex-shrink:0; border:1px solid var(--line, #dfe4ed); border-radius:3px; padding:0 5px; font-family:inherit; font-size:var(--text-small, .75rem); line-height:1.5; }\n.ds-search-box svg { fill:none; stroke:currentColor; stroke-width:1.65; stroke-linecap:round; stroke-linejoin:round; flex-shrink:0; }\n.ds-search-box input { caret-color:var(--accent, #4b5fc5); }\n@media (pointer:coarse) { .ds-search-box { min-height:44px; } }\n@media (forced-colors:active) { .ds-search-box:focus-within { outline-color:Highlight; } }"
+    },
+    {
+      "name": "Section navigation",
+      "kind": "nav",
+      "refersTo": "navigation",
+      "description": "Appearance, player, hidden blocks and MyShows; first tab shown selected. Static style specimen.",
+      "html": "<div class=\"ds-specimen\"><nav class=\"ds-tabs\" aria-label=\"Разделы настроек\" role=\"tablist\">\n      <button role=\"tab\" aria-selected=\"true\"><svg aria-hidden=\"true\" viewBox=\"0 0 24 24\"><rect x=\"3\" y=\"4\" width=\"18\" height=\"13\" rx=\"2\"/><path d=\"M8 21h8m-4-4v4\"/></svg>Вид</button>\n      <button role=\"tab\" aria-selected=\"false\" tabindex=\"-1\"><svg aria-hidden=\"true\" viewBox=\"0 0 24 24\"><path d=\"m9 5 11 7-11 7zM4 5v14\"/></svg>Плеер</button>\n      <button role=\"tab\" aria-selected=\"false\" tabindex=\"-1\"><svg aria-hidden=\"true\" viewBox=\"0 0 24 24\"><path d=\"m3 3 18 18M10.5 10.5a2 2 0 0 0 3 3M9 5.4A11 11 0 0 1 12 5c7 0 10 7 10 7a16 16 0 0 1-3 4M6 6a18 18 0 0 0-4 6s3 7 10 7a11 11 0 0 0 4-.7\"/></svg>Скрытие</button>\n      <button role=\"tab\" aria-selected=\"false\" tabindex=\"-1\"><svg aria-hidden=\"true\" viewBox=\"0 0 24 24\"><rect x=\"3\" y=\"4\" width=\"18\" height=\"16\" rx=\"2\"/><path d=\"m7 12 3 3 7-7\"/></svg>MyShows</button>\n    </nav></div>",
+      "css": ".ds-specimen { font-family:var(--font-family, \"Segoe UI Variable\", \"Segoe UI\", system-ui, sans-serif); font-size:var(--text-body, .8125rem); line-height:1.5; color:var(--ink, #222a3b); }\n:where(.ds-specimen button, .ds-specimen input) { font:inherit; color:inherit; }\n.ds-specimen button { cursor:pointer; }\n.ds-specimen button:disabled, .ds-specimen input:disabled { opacity:.65; cursor:default; }\n.ds-specimen :focus-visible { outline:2px solid var(--accent, #4b5fc5); outline-offset:3px; }\n.ds-specimen ::selection { background:var(--accent, #4b5fc5); color:var(--surface, #ffffff); }\n@media (forced-colors:active) { .ds-specimen :focus-visible { outline-color:Highlight; } }\n.ds-tabs { display:flex; flex-wrap:wrap; margin:0; padding:3px; gap:3px; background:var(--subtle-surface, #e6eaf1); border-radius:10px; }\n.ds-tabs button { border:0; border-radius:7px; background:none; color:var(--muted, #58657a); flex:1 1 0; min-width:0; min-height:48px; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:4px; font-size:var(--text-small, .75rem); font-weight:600; padding:7px 2px; overflow-wrap:anywhere; }\n.ds-tabs button:hover { color:var(--ink, #222a3b); background:var(--canvas, #f2f4f8); }\n.ds-tabs button[aria-selected=\"true\"] { background:var(--surface, #ffffff); color:var(--accent, #4b5fc5); box-shadow:var(--selection-shadow, 0 1px 3px #222a3b14); }\n.ds-tabs svg { width:18px; height:18px; }\n.ds-tabs svg { fill:none; stroke:currentColor; stroke-width:1.65; stroke-linecap:round; stroke-linejoin:round; flex-shrink:0; }\n@media (max-width:350px) { .ds-tabs button { flex-basis:auto; } }\n@media (forced-colors:active) { .ds-tabs button[aria-selected=\"true\"] { outline:2px solid Highlight; outline-offset:-2px; } }"
+    },
+    {
+      "name": "Switch setting row",
+      "kind": "input",
+      "description": "A whole native label toggles the compact switch. This specimen does not persist settings.",
+      "html": "<div class=\"ds-specimen\"><label class=\"ds-setting ds-setting-toggle\"><span class=\"ds-setting-text\"><span class=\"ds-setting-name\" id=\"ds-enabled-label\">Автоматические отметки</span><span class=\"ds-setting-description\" id=\"ds-enabled-description\">Учёт просмотра и обработка очереди</span></span><input type=\"checkbox\" role=\"switch\" class=\"ds-switch\" checked aria-labelledby=\"ds-enabled-label\" aria-describedby=\"ds-enabled-description\"></label></div>",
+      "css": ".ds-specimen { font-family:var(--font-family, \"Segoe UI Variable\", \"Segoe UI\", system-ui, sans-serif); font-size:var(--text-body, .8125rem); line-height:1.5; color:var(--ink, #222a3b); }\n:where(.ds-specimen button, .ds-specimen input) { font:inherit; color:inherit; }\n.ds-specimen button { cursor:pointer; }\n.ds-specimen button:disabled, .ds-specimen input:disabled { opacity:.65; cursor:default; }\n.ds-specimen :focus-visible { outline:2px solid var(--accent, #4b5fc5); outline-offset:3px; }\n.ds-specimen ::selection { background:var(--accent, #4b5fc5); color:var(--surface, #ffffff); }\n@media (forced-colors:active) { .ds-specimen :focus-visible { outline-color:Highlight; } }\n.ds-setting { display:flex; align-items:center; justify-content:space-between; gap:16px; min-height:57px; padding:12px 0; border-bottom:1px solid var(--line, #dfe4ed); }\n.ds-setting:last-child { border-bottom:0; }\n.ds-setting-toggle { cursor:pointer; }\n.ds-setting-toggle:hover .ds-setting-name { color:var(--accent, #4b5fc5); }\n.ds-setting-text { display:flex; flex-direction:column; gap:3px; min-width:0; }\n.ds-setting-name { font-weight:600; font-size:var(--text-body, .8125rem); line-height:1.46; overflow-wrap:anywhere; }\n.ds-setting-description { font-size:var(--text-small, .75rem); line-height:1.5; color:var(--muted, #58657a); max-width:270px; overflow-wrap:anywhere; text-wrap:pretty; }\n.ds-switch { appearance:none; position:relative; width:34px; height:20px; flex:0 0 34px; border:1px solid var(--control-border, #77839a); border-radius:20px; background:var(--control-off, #77839a); margin:0 1px; cursor:pointer; transition:background var(--motion-fast, 150ms); }\n.ds-switch::before { content:\"\"; position:absolute; width:14px; height:14px; border-radius:50%; background:var(--surface, #ffffff); left:2px; top:2px; transition:transform var(--motion-fast, 150ms); }\n.ds-switch:checked { background:var(--accent, #4b5fc5); border-color:var(--accent, #4b5fc5); }\n.ds-switch:checked::before { transform:translateX(14px); }\n@media (prefers-reduced-motion:reduce) { .ds-switch, .ds-switch::before { transition:none; } }\n@media (forced-colors:active) { .ds-switch { background:Canvas; border-color:ButtonText; forced-color-adjust:none; } .ds-switch::before { background:ButtonText; forced-color-adjust:none; } .ds-switch:checked { background:Highlight; border-color:Highlight; } .ds-switch:checked::before { background:HighlightText; } }"
+    },
+    {
+      "name": "MyShows primary action",
+      "kind": "button",
+      "description": "Manual completion or recovery is the primary action for the current episode. Static style specimen.",
+      "html": "<div class=\"ds-specimen\"><button class=\"ds-myshows-button ds-myshows-primary\" type=\"button\">Засчитать серию</button></div>",
+      "css": ".ds-specimen { font-family:var(--font-family, \"Segoe UI Variable\", \"Segoe UI\", system-ui, sans-serif); font-size:var(--text-body, .8125rem); line-height:1.5; color:var(--ink, #222a3b); }\n:where(.ds-specimen button, .ds-specimen input) { font:inherit; color:inherit; }\n.ds-specimen button { cursor:pointer; }\n.ds-specimen button:disabled, .ds-specimen input:disabled { opacity:.65; cursor:default; }\n.ds-specimen :focus-visible { outline:2px solid var(--accent, #4b5fc5); outline-offset:3px; }\n.ds-specimen ::selection { background:var(--accent, #4b5fc5); color:var(--surface, #ffffff); }\n@media (forced-colors:active) { .ds-specimen :focus-visible { outline-color:Highlight; } }\n.ds-myshows-button { min-height:40px; padding:8px 12px; border:1px solid var(--control-border, #77839a); border-radius:var(--radius-control, 8px); background:var(--surface, #ffffff); font-weight:600; }\n.ds-myshows-button:hover { background:var(--hover-surface, #e4e8f1); }\n.ds-myshows-button:active { background:var(--subtle-surface, #e6eaf1); }\n.ds-myshows-button:disabled, .ds-myshows-actions button:disabled { cursor:default; }\n.ds-myshows-primary { background:var(--accent, #4b5fc5); border-color:var(--accent, #4b5fc5); color:var(--surface, #ffffff); }\n.ds-myshows-primary:hover { background:var(--accent-hover, #3d4fae); }\n.ds-myshows-primary:active { background:var(--notice-ink, #38497e); }"
+    },
+    {
+      "name": "MyShows secondary action",
+      "kind": "button",
+      "description": "Resume tracking for a cancelled episode that was not submitted. Static style specimen.",
+      "html": "<div class=\"ds-specimen\"><button class=\"ds-myshows-button\" type=\"button\">Продолжить отслеживание</button></div>",
+      "css": ".ds-specimen { font-family:var(--font-family, \"Segoe UI Variable\", \"Segoe UI\", system-ui, sans-serif); font-size:var(--text-body, .8125rem); line-height:1.5; color:var(--ink, #222a3b); }\n:where(.ds-specimen button, .ds-specimen input) { font:inherit; color:inherit; }\n.ds-specimen button { cursor:pointer; }\n.ds-specimen button:disabled, .ds-specimen input:disabled { opacity:.65; cursor:default; }\n.ds-specimen :focus-visible { outline:2px solid var(--accent, #4b5fc5); outline-offset:3px; }\n.ds-specimen ::selection { background:var(--accent, #4b5fc5); color:var(--surface, #ffffff); }\n@media (forced-colors:active) { .ds-specimen :focus-visible { outline-color:Highlight; } }\n.ds-myshows-button { min-height:40px; padding:8px 12px; border:1px solid var(--control-border, #77839a); border-radius:var(--radius-control, 8px); background:var(--surface, #ffffff); font-weight:600; }\n.ds-myshows-button:hover { background:var(--hover-surface, #e4e8f1); }\n.ds-myshows-button:active { background:var(--subtle-surface, #e6eaf1); }\n.ds-myshows-button:disabled, .ds-myshows-actions button:disabled { cursor:default; }"
+    },
+    {
+      "name": "Current MyShows episode",
+      "kind": "card",
+      "description": "One grouped task context with measured credit, threshold marker, confirmation and actions. Illustrative values match the verified 0.6.7 test capture; this specimen does not track playback or send requests.",
+      "html": "<div class=\"ds-specimen\"><section class=\"ds-myshows-current\" aria-label=\"Текущая серия\"><div class=\"ds-myshows-current-heading\"><h2 class=\"ds-myshows-journal-title\">Текущая серия</h2><p class=\"ds-myshows-state\" data-status=\"watching\">Смотрю</p></div><div class=\"ds-myshows-current-body\"><h3 class=\"ds-myshows-account\">Тестовый сериал · S01E01</h3><p class=\"ds-myshows-progress\"><span class=\"ds-myshows-progress-credit\">Учтено <strong class=\"ds-myshows-progress-value\">37%</strong></span><span class=\"ds-myshows-progress-threshold\"><span class=\"ds-visually-hidden\"> · </span><span>порог 90%</span></span></p><div class=\"ds-myshows-progress-track\" style=\"--myshows-threshold:90%\"><progress class=\"ds-myshows-progress-meter\" max=\"100\" value=\"37\" aria-label=\"Учтённая часть серии\" aria-valuetext=\"Учтено 37% · порог 90%\"></progress><span class=\"ds-myshows-threshold-marker\" aria-hidden=\"true\"></span></div><p class=\"ds-myshows-confirmation\">Подтверждение позиции: 20 из 30 секунд</p><div class=\"ds-myshows-actions\"><button type=\"button\" class=\"ds-myshows-button ds-myshows-primary\">Засчитать серию</button><button type=\"button\" class=\"ds-text-button\">Отменить отправку</button></div></div></section></div>",
+      "css": ".ds-specimen { font-family:var(--font-family, \"Segoe UI Variable\", \"Segoe UI\", system-ui, sans-serif); font-size:var(--text-body, .8125rem); line-height:1.5; color:var(--ink, #222a3b); }\n:where(.ds-specimen button, .ds-specimen input) { font:inherit; color:inherit; }\n.ds-specimen button { cursor:pointer; }\n.ds-specimen button:disabled, .ds-specimen input:disabled { opacity:.65; cursor:default; }\n.ds-specimen :focus-visible { outline:2px solid var(--accent, #4b5fc5); outline-offset:3px; }\n.ds-specimen ::selection { background:var(--accent, #4b5fc5); color:var(--surface, #ffffff); }\n@media (forced-colors:active) { .ds-specimen :focus-visible { outline-color:Highlight; } }\n.ds-myshows-current-heading { display:flex; align-items:baseline; justify-content:space-between; flex-wrap:wrap; gap:4px 12px; margin-bottom:10px; }\n.ds-myshows-current-heading .ds-myshows-journal-title { margin:0; }\n.ds-myshows-current-heading .ds-myshows-state { margin:0; font-size:var(--text-small, .75rem); }\n.ds-myshows-current-body { padding:16px; border:1px solid var(--line, #dfe4ed); border-radius:var(--radius-panel, 11px); background:var(--surface, #ffffff); }\n.ds-myshows-current .ds-myshows-account { font-size:var(--text-title, 1rem); line-height:1.5; margin:0 0 14px; }\n.ds-myshows-current .ds-myshows-description { margin:0 0 8px; }\n.ds-myshows-current .ds-myshows-actions { margin-top:10px; }\n.ds-myshows-current .ds-text-button { font-size:var(--text-small, .75rem); color:var(--muted, #58657a); }\n.ds-myshows-current .ds-text-button:hover { color:var(--ink, #222a3b); }\n.ds-myshows-account { margin:0; font-weight:600; overflow-wrap:anywhere; }\n.ds-myshows-progress { display:flex; align-items:baseline; justify-content:space-between; flex-wrap:wrap; gap:2px 8px; margin:0 0 8px; color:var(--muted, #58657a); font-size:var(--text-small, .75rem); font-variant-numeric:tabular-nums; overflow-wrap:anywhere; }\n.ds-myshows-progress-credit { display:inline-flex; align-items:baseline; gap:6px; }\n.ds-myshows-progress-value { font-size:var(--text-heading, 1.375rem); line-height:1.275; font-weight:600; color:var(--ink, #222a3b); }\n.ds-myshows-progress-threshold { flex:0 1 auto; }\n.ds-myshows-progress-track { position:relative; margin:0 1px 10px; }\n.ds-myshows-progress-meter { appearance:none; display:block; width:100%; height:6px; overflow:hidden; border:0; border-radius:3px; background:var(--subtle-surface, #e6eaf1); color:var(--accent, #4b5fc5); }\n.ds-myshows-progress-meter::-webkit-progress-bar { background:var(--subtle-surface, #e6eaf1); border-radius:3px; }\n.ds-myshows-progress-meter::-webkit-progress-value { background:var(--accent, #4b5fc5); border-radius:3px; }\n.ds-myshows-progress-meter::-moz-progress-bar { background:var(--accent, #4b5fc5); border-radius:3px; }\n.ds-myshows-threshold-marker { position:absolute; left:var(--myshows-threshold); top:-3px; width:2px; height:12px; margin-left:-1px; border-radius:1px; background:var(--muted, #58657a); }\n.ds-myshows-confirmation { min-height:3.2em; margin:0; color:var(--muted, #58657a); font-size:var(--text-small, .75rem); line-height:1.6; font-variant-numeric:tabular-nums; overflow-wrap:anywhere; }\n.ds-myshows-journal-title { font-size:var(--text-title, 1rem); line-height:1.375; margin:22px 0 8px; font-weight:600; }\n.ds-myshows-actions { display:flex; align-items:center; flex-wrap:wrap; gap:4px 8px; }\n.ds-myshows-state { color:var(--notice-ink, #38497e); font-weight:600; overflow-wrap:anywhere; }\n.ds-myshows-state[data-status=\"done\"] { color:var(--success, #30735e); }\n.ds-myshows-state[data-status=\"attention\"] { color:var(--error-ink, #9a3139); }\n.ds-myshows-state[data-status=\"cancelled\"] { color:var(--muted, #58657a); }\n.ds-myshows-button { min-height:40px; padding:8px 12px; border:1px solid var(--control-border, #77839a); border-radius:var(--radius-control, 8px); background:var(--surface, #ffffff); font-weight:600; }\n.ds-myshows-button:hover { background:var(--hover-surface, #e4e8f1); }\n.ds-myshows-button:active { background:var(--subtle-surface, #e6eaf1); }\n.ds-myshows-button:disabled, .ds-myshows-actions button:disabled { cursor:default; }\n.ds-myshows-primary { background:var(--accent, #4b5fc5); border-color:var(--accent, #4b5fc5); color:var(--surface, #ffffff); }\n.ds-myshows-primary:hover { background:var(--accent-hover, #3d4fae); }\n.ds-myshows-primary:active { background:var(--notice-ink, #38497e); }\n.ds-text-button { background:none; border:0; min-height:44px; padding:8px 4px; color:var(--accent, #4b5fc5); text-underline-offset:3px; }\n.ds-text-button:hover { text-decoration:underline; }\n.ds-visually-hidden { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; border:0; }\n@media (forced-colors:active) { .ds-myshows-progress-meter { appearance:auto; } .ds-myshows-threshold-marker { background:CanvasText; forced-color-adjust:none; } }"
+    },
+    {
+      "name": "Journal filters",
+      "kind": "nav",
+      "description": "Underline selection and counts for queue, attention and history. Illustrative counts; static style specimen.",
+      "html": "<div class=\"ds-specimen\"><div class=\"ds-myshows-filters\" role=\"group\" aria-label=\"Записи синхронизации\"><button class=\"ds-myshows-button\" type=\"button\" aria-pressed=\"true\">Очередь <span class=\"ds-myshows-filter-count\">2</span></button><button class=\"ds-myshows-button\" type=\"button\" aria-pressed=\"false\">Внимание <span class=\"ds-myshows-filter-count\">1</span></button><button class=\"ds-myshows-button\" type=\"button\" aria-pressed=\"false\">История <span class=\"ds-myshows-filter-count\">2</span></button></div></div>",
+      "css": ".ds-specimen { font-family:var(--font-family, \"Segoe UI Variable\", \"Segoe UI\", system-ui, sans-serif); font-size:var(--text-body, .8125rem); line-height:1.5; color:var(--ink, #222a3b); }\n:where(.ds-specimen button, .ds-specimen input) { font:inherit; color:inherit; }\n.ds-specimen button { cursor:pointer; }\n.ds-specimen button:disabled, .ds-specimen input:disabled { opacity:.65; cursor:default; }\n.ds-specimen :focus-visible { outline:2px solid var(--accent, #4b5fc5); outline-offset:3px; }\n.ds-specimen ::selection { background:var(--accent, #4b5fc5); color:var(--surface, #ffffff); }\n@media (forced-colors:active) { .ds-specimen :focus-visible { outline-color:Highlight; } }\n.ds-myshows-button { min-height:40px; padding:8px 12px; border:1px solid var(--control-border, #77839a); border-radius:var(--radius-control, 8px); background:var(--surface, #ffffff); font-weight:600; }\n.ds-myshows-button:hover { background:var(--hover-surface, #e4e8f1); }\n.ds-myshows-button:active { background:var(--subtle-surface, #e6eaf1); }\n.ds-myshows-button:disabled, .ds-myshows-actions button:disabled { cursor:default; }\n.ds-myshows-filters { display:flex; gap:8px; margin:0; border-bottom:1px solid var(--line, #dfe4ed); }\n.ds-myshows-filters button { display:flex; align-items:center; justify-content:center; flex:1; flex-wrap:wrap; gap:2px 6px; min-width:0; padding:10px 2px; border:0; border-bottom:2px solid transparent; border-radius:0; background:transparent; color:var(--muted, #58657a); font-size:var(--text-small, .75rem); font-variant-numeric:tabular-nums; overflow-wrap:anywhere; }\n.ds-myshows-filters button:hover { color:var(--ink, #222a3b); background:var(--hover-surface, #e4e8f1); }\n.ds-myshows-filters [aria-pressed=\"true\"] { border-bottom-color:var(--accent, #4b5fc5); color:var(--accent, #4b5fc5); }\n.ds-myshows-filter-count { font-weight:400; }\n@media (forced-colors:active) { .ds-myshows-filters [aria-pressed=\"true\"] { border-bottom-color:Highlight; } }"
+    },
+    {
+      "name": "Journal entry",
+      "kind": "custom",
+      "description": "Compact episode identity and status above supporting text, actions and persistent native history disclosure. Illustrative record; only the disclosure is interactive in this specimen.",
+      "html": "<div class=\"ds-specimen\"><article class=\"ds-myshows-entry\"><div class=\"ds-myshows-entry-meta\"><div class=\"ds-myshows-entry-identity\"><h3>Тестовый сериал</h3><span class=\"ds-myshows-episode\">S01E01</span></div><span class=\"ds-myshows-state\" data-status=\"watching\">Смотрю</span></div><p class=\"ds-myshows-description\">Учтено 37% · порог 90%</p><div class=\"ds-myshows-actions\"><button class=\"ds-text-button\" type=\"button\">Засчитать серию</button><button class=\"ds-text-button\" type=\"button\" data-myshows-action=\"example-cancel\">Отменить отправку</button></div><details class=\"ds-myshows-events\"><summary>История · 1 нояб., 08:21</summary><ol><li>1 нояб., 08:21 · Начат просмотр</li></ol></details></article></div>",
+      "css": ".ds-specimen { font-family:var(--font-family, \"Segoe UI Variable\", \"Segoe UI\", system-ui, sans-serif); font-size:var(--text-body, .8125rem); line-height:1.5; color:var(--ink, #222a3b); }\n:where(.ds-specimen button, .ds-specimen input) { font:inherit; color:inherit; }\n.ds-specimen button { cursor:pointer; }\n.ds-specimen button:disabled, .ds-specimen input:disabled { opacity:.65; cursor:default; }\n.ds-specimen :focus-visible { outline:2px solid var(--accent, #4b5fc5); outline-offset:3px; }\n.ds-specimen ::selection { background:var(--accent, #4b5fc5); color:var(--surface, #ffffff); }\n@media (forced-colors:active) { .ds-specimen :focus-visible { outline-color:Highlight; } }\n.ds-text-button { background:none; border:0; min-height:44px; padding:8px 4px; color:var(--accent, #4b5fc5); text-underline-offset:3px; }\n.ds-text-button:hover { text-decoration:underline; }\n.ds-myshows-description { color:var(--muted, #58657a); font-size:var(--text-small, .75rem); line-height:1.6; margin:5px 0 9px; overflow-wrap:anywhere; }\n.ds-myshows-actions { display:flex; align-items:center; flex-wrap:wrap; gap:4px 8px; }\n.ds-myshows-entry { padding:14px 0; border-bottom:1px solid var(--line, #dfe4ed); }\n.ds-myshows-entry h3 { font-size:var(--text-body, .8125rem); font-weight:600; line-height:1.5; margin:0; overflow-wrap:anywhere; }\n.ds-myshows-entry-meta { display:flex; flex-wrap:wrap; align-items:baseline; justify-content:space-between; gap:4px 12px; margin-bottom:6px; font-size:var(--text-small, .75rem); }\n.ds-myshows-entry-identity { display:flex; flex-wrap:wrap; align-items:baseline; gap:2px 8px; min-width:0; }\n.ds-myshows-entry .ds-myshows-description { margin:4px 0; }\n.ds-myshows-entry .ds-myshows-actions { margin-top:6px; column-gap:16px; }\n.ds-myshows-entry .ds-text-button { min-height:36px; padding:6px 0; font-size:var(--text-small, .75rem); }\n.ds-myshows-entry [data-myshows-action$=\"-cancel\"] { color:var(--muted, #58657a); }\n.ds-myshows-episode { color:var(--muted, #58657a); font-variant-numeric:tabular-nums; }\n.ds-myshows-state { color:var(--notice-ink, #38497e); font-weight:600; overflow-wrap:anywhere; }\n.ds-myshows-state[data-status=\"done\"] { color:var(--success, #30735e); }\n.ds-myshows-state[data-status=\"attention\"] { color:var(--error-ink, #9a3139); }\n.ds-myshows-state[data-status=\"cancelled\"] { color:var(--muted, #58657a); }\n.ds-myshows-events { color:var(--muted, #58657a); font-size:var(--text-small, .75rem); }\n.ds-myshows-events summary { cursor:pointer; padding:6px 0; min-height:32px; font-variant-numeric:tabular-nums; }\n.ds-myshows-events summary:hover { color:var(--ink, #222a3b); }\n.ds-myshows-events ol { padding-left:18px; margin:4px 0 8px; }\n.ds-myshows-events li { margin:5px 0; overflow-wrap:anywhere; font-variant-numeric:tabular-nums; }"
+    }
+  ],
+  "narrative": {
+    "overview": "This records the existing light settings interface, moved to a full-height side panel in 0.3.0. Version 0.6.3 has four sections: appearance, player, hiding blocks and MyShows. The country-filter section was removed at the user's request; catalogue selection remains available through advanced search. Its authority is the shipped interface, the user's request to preserve its appearance, and the menu design notes. It preserves the established identity; no new brand metaphor or unconfirmed aesthetic preference is introduced.\n\nShort Russian labels, familiar Windows typography, cool neutral surfaces and one indigo accent make controls easy to scan. The logo and four-section navigation distinguish the interface. Setting rows carry most content; a white panel groups the numeric width choices. The decorative width preview was removed in 0.3.2 at the user's request.",
+    "keyCharacteristics": [],
+    "rules": [],
+    "dos": [
+      "Do use semantic tokens and verify actual text/background and control/background pairs.",
+      "Do fill the available panel height and verify the real side panel in the user's existing Chrome at their current display scale.",
+      "Do keep labels, keyboard operation, long-content wrapping and recovery paths.",
+      "Do distinguish source/DOM checks from rendered layout, screen-reader and real-service acceptance."
+    ],
+    "donts": [
+      "Don't introduce a new type family, dark theme or brand metaphor during routine polishing.",
+      "Don't clear the active search or move focus when the browser tab changes.",
+      "Don't accept a fixed-size preview or disposable profile as acceptance in the user's installed Chrome."
+    ]
+  }
+}
