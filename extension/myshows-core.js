@@ -41,10 +41,18 @@ const RezkaMyShows = (() => {
             year: Number.isInteger(input.year) && input.year >= 1900 && input.year <= 2200 ? input.year : undefined };
     }
     function episodeKey(ep) { return `${ep.rezkaId}:${ep.season}:${ep.number}`; }
+    function sourceFor(id) {
+        if (!/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(id)) throw new Error('Invalid entry identifier');
+        // Keep every UUID bit, but fit inside the 29-character length already accepted by MyShows.
+        const bytes = id.replaceAll('-', '').match(/../g).map(value => parseInt(value, 16));
+        return 'Rezka-' + btoa(String.fromCharCode(...bytes)).replaceAll('+', '-').replaceAll('/', '_').replace(/=+$/, '');
+    }
     function label(ep) { return `S${String(ep.season).padStart(2, '0')}E${String(ep.number).padStart(2, '0')}`; }
     function canForce(entry) {
         return !entry || (!entry.submittedAt && !entry.manualPending && ['watching', 'queued', 'attention', 'cancelled'].includes(entry.status));
     }
+    function canCancel(entry) { return !!entry && ['watching', 'queued', 'sending', 'confirming', 'checking', 'attention'].includes(entry.status); }
+    function canResume(entry) { return entry?.status === 'cancelled' && !entry.submittedAt; }
     function payload(entry, version) {
         const show = { title: entry.episode.originalTitle || entry.episode.title, ids: { imdb: entry.episode.imdb } };
         if (entry.episode.year) show.year = entry.episode.year;
@@ -58,5 +66,5 @@ const RezkaMyShows = (() => {
         entry.status = status; entry.reason = reason; entry.updatedAt = now;
         return entry;
     }
-    return { key, historyUrl, terminal, active, initial, mergeRanges, percent, interval, validEpisode, episodeKey, label, canForce, payload, transition };
+    return { key, historyUrl, terminal, active, initial, mergeRanges, percent, interval, validEpisode, episodeKey, sourceFor, label, canForce, canCancel, canResume, payload, transition };
 })();

@@ -1,7 +1,10 @@
 const RezkaMyShowsPanel = (() => {
     const M = RezkaMyShows;
     const labels = { watching: 'Смотрю', queued: 'В очереди', sending: 'Отправляем', confirming: 'Подтверждаем', checking: 'Проверяем',
-        attention: 'Нужно внимание', done: 'Отмечено', cancelled: 'Остановлено' };
+        attention: 'Нужно внимание', done: 'Отмечено', cancelled: 'Отменено' };
+    const cancelledDescription = entry => entry.submittedAt
+        ? 'Синхронизация отменена. Запрос уже отправлен: проверьте результат в MyShows. Отмена здесь не снимает отметку на сайте.'
+        : 'Отправка отменена, серия не отмечена этим запросом. Можно продолжить отслеживание по фактическому просмотру.';
     let dispose = () => {}, selectedFilter = 'queue';
     const element = (tag, className, text) => {
         const node = document.createElement(tag);
@@ -48,7 +51,17 @@ const RezkaMyShowsPanel = (() => {
         const forceCurrent = button('Засчитать серию', () => {
             if (current) command('force', { tabId: current.tabId, key: current.key, account: state.account });
         }); forceCurrent.hidden = true;
-        currentSection.append(currentTitle, currentDescription, forceCurrent);
+        const currentEntry = () => current && state?.entries.find(entry => entry.account === state.account && entry.key === current.key);
+        const cancelCurrent = button('Отменить отправку', () => {
+            const entry = currentEntry(); if (entry) command('cancel', { id: entry.id });
+        }, 'text-button'); cancelCurrent.dataset.myshowsCurrent = 'cancel'; cancelCurrent.hidden = true;
+        const resumeCurrent = button('Продолжить отслеживание', () => {
+            const entry = currentEntry(); if (entry) command('resume', { id: entry.id, account: state.account });
+        }); resumeCurrent.dataset.myshowsCurrent = 'resume'; resumeCurrent.hidden = true;
+        const currentState = element('p', 'myshows-state'); currentState.hidden = true;
+        const currentLink = link('Проверить в MyShows', M.historyUrl); currentLink.hidden = true;
+        const currentActions = element('div', 'myshows-actions'); currentActions.append(forceCurrent, resumeCurrent, cancelCurrent, currentLink);
+        currentSection.append(currentTitle, currentState, currentDescription, currentActions);
         const message = element('p', 'myshows-message'); message.setAttribute('role', 'status'); message.setAttribute('aria-live', 'polite'); message.hidden = true;
         const heading = element('h2', 'myshows-journal-title', 'Синхронизация');
         const summary = element('p', 'myshows-description');
@@ -81,10 +94,20 @@ const RezkaMyShowsPanel = (() => {
             disconnectButton.disabled = busy || connecting;
             connectButton.hidden = connected;
             disconnectButton.hidden = !connected;
-            const currentEntry = current && state?.entries.find(entry => entry.account === state.account && entry.key === current.key);
-            forceCurrent.disabled = busy || !connected || !current || !M.canForce(currentEntry);
-            forceCurrent.textContent = currentEntry?.status === 'done' ? 'Уже отмечено' : currentEntry && !M.canForce(currentEntry)
-                ? (currentEntry.status === 'attention' ? 'Нужна проверка в списке' : 'Уже в синхронизации') : 'Засчитать серию';
+            const entry = currentEntry();
+            forceCurrent.hidden = !current || (entry?.status === 'cancelled' && !!entry.submittedAt);
+            forceCurrent.disabled = busy || !connected || !current || !M.canForce(entry);
+            forceCurrent.textContent = entry?.status === 'cancelled' && entry.submittedAt ? 'Отменено' : entry?.status === 'done' ? 'Уже отмечено' : entry && !M.canForce(entry)
+                ? (entry.status === 'attention' ? 'Нужна проверка в списке' : 'Уже в синхронизации') : 'Засчитать серию';
+            cancelCurrent.hidden = !M.canCancel(entry); cancelCurrent.disabled = busy;
+            cancelCurrent.textContent = entry?.submittedAt ? 'Остановить синхронизацию' : 'Отменить отправку';
+            resumeCurrent.hidden = !M.canResume(entry); resumeCurrent.disabled = busy || !connected;
+            currentState.hidden = entry?.status !== 'cancelled'; currentState.textContent = entry?.status === 'cancelled' ? 'Отменено' : '';
+            currentLink.hidden = entry?.status !== 'cancelled' || !entry.submittedAt;
+            currentLink.href = entry?.episodeId ? `https://myshows.me/view/episode/${entry.episodeId}/` : M.historyUrl;
+            currentDescription.textContent = entry?.status === 'cancelled' ? cancelledDescription(entry) : current
+                ? 'Засчитать эту серию сейчас, даже если порог просмотра не достигнут. Работает и при выключенных автоотметках.'
+                : 'Откройте нужную серию на Rezka. Если она уже открыта, обновите страницу после обновления расширения.';
             for (const action of list.querySelectorAll('button')) action.disabled = busy || (action.dataset.requiresConnection === 'true' && !connected);
         }
         async function refreshCurrent() {
@@ -102,9 +125,6 @@ const RezkaMyShowsPanel = (() => {
         function showCurrent() {
             currentTitle.textContent = current ? `${current.episode.title} · ${M.label(current.episode)}` : '';
             currentTitle.hidden = !current;
-            currentDescription.textContent = current ? 'Засчитать эту серию сейчас, даже если порог просмотра не достигнут. Работает и при выключенных автоотметках.'
-                : 'Откройте нужную серию на Rezka. Если она уже открыта, обновите страницу после обновления расширения.';
-            forceCurrent.hidden = !current;
             controls();
         }
         function renderList() {
@@ -113,12 +133,12 @@ const RezkaMyShowsPanel = (() => {
             const queue = entries.filter(entry => !M.terminal.has(entry.status) && entry.status !== 'attention');
             const attention = entries.filter(entry => entry.status === 'attention');
             const done = entries.filter(entry => entry.status === 'done');
-            summary.textContent = `В очереди и в просмотре: ${queue.length} · Нужно внимание: ${attention.length} · Отмечено: ${done.length}`;
+            summary.textContent = `В очереди и в просмотре: ${queue.length} · Нужно внимание: ${attention.length} · Отмечено: ${done.length} · Отменено: ${entries.filter(entry => entry.status === 'cancelled').length}`;
             filters.querySelectorAll('button').forEach(node => node.setAttribute('aria-pressed', String(node.dataset.filter === filter)));
             let items = (filter === 'queue' ? queue : filter === 'attention' ? attention : entries.filter(entry => M.terminal.has(entry.status)))
                 .filter(entry => `${entry.episode.title} ${entry.episode.originalTitle} ${M.label(entry.episode)}`.toLocaleLowerCase('ru').includes(query))
                 .sort((a, b) => b.updatedAt - a.updatedAt);
-            const nextSignature = JSON.stringify(items.slice(0, limit).map(e => [e.id, e.status, e.reason, Math.floor(e.progress), e.events, e.nextAt, e.manualAt, e.manualPending]));
+            const nextSignature = JSON.stringify(items.slice(0, limit).map(e => [e.id, e.status, e.reason, Math.floor(e.progress), e.events, e.nextAt, e.manualAt, e.manualPending, e.submittedAt, e.episodeId]));
             if (signature === nextSignature) return;
             signature = nextSignature;
             const focused = document.activeElement?.dataset.myshowsAction;
@@ -138,8 +158,12 @@ const RezkaMyShowsPanel = (() => {
                 meta.lastChild.dataset.status = entry.status; row.append(meta);
                 if (entry.status === 'watching') row.append(element('p', 'myshows-description', `Просмотрено ${Math.floor(entry.progress)}% · Отметим после ${state.threshold}%`));
                 if (entry.manualAt) row.append(element('p', 'myshows-description', 'По кнопке «Засчитать серию»'));
-                if (entry.reason) row.append(element('p', 'myshows-description', entry.reason));
+                if (entry.status === 'cancelled' || entry.reason) row.append(element('p', 'myshows-description', entry.status === 'cancelled' ? cancelledDescription(entry) : entry.reason));
                 const actions = element('div', 'myshows-actions');
+                if (M.canResume(entry)) {
+                    const resume = button('Продолжить отслеживание', () => command('resume', { id: entry.id, account: state.account }), 'text-button');
+                    resume.dataset.myshowsAction = entry.id + '-resume'; resume.dataset.requiresConnection = 'true'; actions.append(resume);
+                }
                 if (M.canForce(entry)) {
                     const force = button('Засчитать серию', () => command('force', { id: entry.id, account: state.account }), 'text-button');
                     force.dataset.myshowsAction = entry.id + '-force'; force.dataset.requiresConnection = 'true'; actions.append(force);
@@ -148,8 +172,8 @@ const RezkaMyShowsPanel = (() => {
                     const retry = button(entry.submittedAt ? 'Проверить' : 'Повторить', () => command('retry', { id: entry.id }), 'text-button');
                     retry.dataset.myshowsAction = entry.id + '-retry'; actions.append(retry);
                 }
-                if (['watching', 'queued', 'attention'].includes(entry.status)) {
-                    const cancel = button('Остановить', () => command('cancel', { id: entry.id }), 'text-button');
+                if (M.canCancel(entry)) {
+                    const cancel = button(entry.submittedAt ? 'Остановить синхронизацию' : 'Отменить отправку', () => command('cancel', { id: entry.id }), 'text-button');
                     cancel.dataset.myshowsAction = entry.id + '-cancel'; actions.append(cancel);
                 }
                 if (entry.episodeId) actions.append(link('Серия в MyShows', `https://myshows.me/view/episode/${entry.episodeId}/`));

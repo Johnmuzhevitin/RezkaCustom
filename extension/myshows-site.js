@@ -49,7 +49,7 @@
     }
     async function reconcile(request) {
         await ready(); ensureAccount(request.account);
-        if (location.pathname !== '/profile/watch-history/' || !/^Rezka Custom · [a-f0-9-]{36}$/.test(request.source)) throw new Error('page');
+        if (location.pathname !== '/profile/watch-history/' || !/^(?:Rezka-[A-Za-z0-9_-]{22}|Rezka Custom · [a-f0-9-]{36})$/.test(request.source)) throw new Error('page');
         let card;
         for (let i = 0; i < 20; i++) { card = cardFor(request.source); if (card) break; await sleep(250); }
         if (!card) throw new Error('missing');

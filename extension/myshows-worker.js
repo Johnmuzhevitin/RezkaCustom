@@ -2,7 +2,7 @@
     'use strict';
     const M = RezkaMyShows;
     const alarm = 'rezka-myshows-sync';
-    let writes = Promise.resolve(), running = false, connecting = false;
+    let writes = Promise.resolve(), running = false, connecting = false, activeJob = null;
     const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
     const errors = {
         login: 'Войдите в MyShows в этом Chrome и повторите проверку.',
@@ -21,7 +21,9 @@
         unwatched: 'История подтверждена, но серия ещё не отмечена. Проверим снова автоматически.',
         network: 'Не удалось связаться с MyShows. Проверим снова автоматически.',
         rejected: 'MyShows отклонил запись. Проверьте доступность скробблинга в аккаунте.',
-        paused: 'Синхронизация остановлена. Уже отправленная запись могла сохраниться в MyShows.'
+        validation: 'MyShows отклонил данные серии. Проверьте сериал, сезон и номер серии перед повторной отправкой.',
+        source: 'MyShows отклонил название источника. Обновите расширение и повторите отправку.',
+        paused: 'Синхронизация отменена. Запрос уже отправлен: запись могла сохраниться в MyShows. Проверьте её на сайте; отмена здесь не снимает отметку просмотра.'
     };
     const fail = code => { const error = new Error(code); error.code = code; return error; };
     async function read() { return (await chrome.storage.local.get(M.key))[M.key] || M.initial(); }
@@ -63,18 +65,22 @@
                 body: body ? JSON.stringify(body) : undefined, signal: controller.signal
             });
             let data = null;
-            if (body && response.ok) { try { data = await response.json(); } catch { /* An accepted write with no readable reply needs reconciliation. */ } }
+            if (body) { try { data = await response.json(); } catch { /* An accepted write with no readable reply needs reconciliation. */ } }
             return { status: response.status, data };
         } catch { throw fail('network'); }
         finally { clearTimeout(timer); }
     }
     async function site(tabId, message) {
+        const expectedPath = message.type === 'myshows:site-verify' ? `/view/episode/${message.episodeId}/` : '/profile/watch-history/';
         for (let i = 0; i < 35; i++) {
             try {
                 const tab = await chrome.tabs.get(tabId);
-                if (tab.status !== 'complete') { await sleep(300); continue; }
+                const url = new URL(tab.url);
+                if (url.origin !== 'https://myshows.me' || url.pathname !== expectedPath) { await sleep(300); continue; }
+                // The document/content script can be ready while ads keep tab.status at "loading".
                 const reply = await chrome.tabs.sendMessage(tabId, message, { frameId: 0 });
                 if (reply?.ok) return reply;
+                if (reply?.code === 'page') { await sleep(300); continue; }
                 if (reply) throw fail(Object.hasOwn(errors, reply.code) ? reply.code : 'page');
             } catch (error) { if (error.code) throw error; }
             await sleep(300);
@@ -135,28 +141,73 @@
         return current;
     }
     async function changeEntry(id, change) { return edit(state => { const entry = state.entries.find(e => e.id === id); if (entry) return change(entry, state); }); }
+    function shortenUnsentSource(entry) {
+        const legacy = entry.source?.match(/^Rezka Custom · ([a-f0-9-]{36})$/);
+        if (!entry.submittedAt && legacy) entry.source = M.sourceFor(legacy[1]);
+    }
+    function repairRejectedEntries(state) {
+        for (const entry of state.entries) {
+            const rejected = entry.events?.some(event => event.status === 'attention' && event.reason === errors.rejected);
+            // 0.6.0/0.6.1 saved rejected 4xx requests as submitted. Only explicit rejection
+            // evidence permits retry; a timeout or a missing record is never enough.
+            if (/^Rezka Custom · [a-f0-9-]{36}$/.test(entry.source) && entry.submittedAt && rejected
+                && !entry.episodeId && !entry.scrobbleId && !entry.exact && !entry.events.some(event => ['done', 'confirming'].includes(event.status))) {
+                delete entry.submittedAt;
+                entry.lastError = { stage: 'submit', code: 'legacy_rejected' };
+                if (entry.status !== 'cancelled') {
+                    entry.attempts = 0; entry.nextAt = 0;
+                    entry.manualPending = !!entry.manualAt && (state.enabled || entry.manualPending);
+                    M.transition(entry, 'queued', 'Исправлен формат отправки. Повторяем ранее отклонённую запись.');
+                }
+            }
+            shortenUnsentSource(entry);
+        }
+    }
     async function perform(entry, credential) {
         let tabId;
         try {
             await live(entry);
             // Check the browser account before sending a write with the saved token.
             tabId = await openOwned(M.historyUrl);
+            activeJob = { id: entry.id, tabId };
             const who = await site(tabId, { type: 'myshows:site-account' });
             if (who.account !== entry.account) throw fail('account');
             if (!entry.submittedAt) {
                 if (!entry.episode.imdb) throw fail('identity');
                 entry = await live(entry);
                 // Persist intent BEFORE the network call. A crash can only trigger a read, never a duplicate POST.
-                await changeEntry(entry.id, current => { current.submittedAt = Date.now(); M.transition(current, 'sending'); });
+                const sending = await changeEntry(entry.id, current => {
+                    if (M.terminal.has(current.status)) return null;
+                    shortenUnsentSource(current);
+                    current.submittedAt = Date.now(); M.transition(current, 'sending'); return current;
+                });
+                if (!sending) throw fail('paused');
+                entry = sending;
                 let response;
                 try { response = await api('stop', credential, M.payload(entry, REZKA_BUILD.version)); }
                 catch { response = { status: 0, data: null }; }
                 if ([401, 403, 429].includes(response.status)) {
                     await changeEntry(entry.id, (current, state) => {
                         delete current.submittedAt;
+                        if (M.terminal.has(current.status)) return;
                         current.nextAt = Date.now() + 60000;
                         M.transition(current, 'queued', response.status === 429 ? 'MyShows просит подождать. Повторим через минуту.' : errors.auth);
                         if (response.status !== 429) { state.connection = 'error'; state.enabled = false; state.message = errors.auth; }
+                    });
+                    return;
+                }
+                if ([400, 404, 405, 410, 413, 415, 422].includes(response.status)) {
+                    const validation = typeof response.data?.error === 'string' && response.data.error.startsWith('validation failed:');
+                    const sourceError = validation && response.data.error.includes('sourceApp:len');
+                    await changeEntry(entry.id, current => {
+                        // An explicit rejection did not create a record. Retrying is a new submission,
+                        // unlike uncertain responses which must remain on the reconciliation path.
+                        delete current.submittedAt;
+                        if (M.terminal.has(current.status)) return;
+                        current.manualPending = false; current.attempts = (current.attempts || 0) + 1; current.nextAt = 0;
+                        current.code = sourceError ? 'source' : validation ? 'validation' : 'rejected';
+                        current.lastError = { stage: 'submit', httpStatus: response.status, code: validation ? 'validation' : 'rejected', ...(sourceError ? { field: 'source_app' } : {}) };
+                        M.transition(current, 'attention', errors[current.code]);
                     });
                     return;
                 }
@@ -167,12 +218,13 @@
                         && Number.isSafeInteger(result.objectId) && result.objectId > 0) {
                         current.episodeId = result.objectId; current.exact = true;
                         if (Number.isSafeInteger(result.id)) current.scrobbleId = result.id;
-                        M.transition(current, 'confirming');
+                        if (!M.terminal.has(current.status)) M.transition(current, 'confirming');
                     } else {
                         current.exact = false;
-                        M.transition(current, 'checking', result ? errors.match : 'Ответ MyShows не получен. Проверяем историю перед повтором.');
+                        if (!M.terminal.has(current.status)) M.transition(current, 'checking', result ? errors.match : 'Ответ MyShows не получен. Проверяем историю перед повтором.');
                     }
                 });
+                await live(entry);
                 // Fresh server-rendered history, including the record just created.
                 await chrome.tabs.reload(tabId);
             }
@@ -182,7 +234,8 @@
                 episodeId: entry.episodeId, season: entry.episode.season, number: entry.episode.number,
                 threshold: entry.threshold || state.threshold, allowApprove: !!entry.exact });
             await live(entry);
-            await changeEntry(entry.id, current => { current.episodeId = result.episodeId; M.transition(current, 'checking'); });
+            await changeEntry(entry.id, current => { current.episodeId = result.episodeId; if (!M.terminal.has(current.status)) M.transition(current, 'checking'); });
+            await live(entry);
             await chrome.tabs.update(tabId, { url: `https://myshows.me/view/episode/${result.episodeId}/` });
             const verified = await site(tabId, { type: 'myshows:site-verify', account: entry.account, episodeId: result.episodeId });
             if (!verified.watched) throw fail('unwatched');
@@ -204,7 +257,7 @@
                 current.nextAt = Date.now() + Math.min(3600000, 60000 * 2 ** (current.attempts - 1));
                 M.transition(current, nextStatus, errors[code] || errors.network);
             });
-        } finally { if (tabId) await release(tabId); }
+        } finally { activeJob = null; if (tabId) await release(tabId); }
     }
     async function process() {
         if (running || connecting) return;
@@ -241,7 +294,7 @@
             if (entry && entry.status !== 'watching') return false;
             if (!entry) {
                 const id = crypto.randomUUID();
-                entry = { id, source: 'Rezka Custom · ' + id, key, account: state.account, episode, url: url.origin + url.pathname,
+                entry = { id, source: M.sourceFor(id), key, account: state.account, episode, url: url.origin + url.pathname,
                     createdAt: Date.now(), duration, ranges: [], progress: 0, status: 'watching', events: [] };
                 state.entries.push(entry);
             }
@@ -284,15 +337,33 @@
                 }
             }); kick(); return {};
         }
+        if (message.type === 'myshows:resume') {
+            const result = await changeEntry(message.id, (entry, state) => {
+                if (state.connection !== 'connected' || message.account !== state.account || entry.account !== state.account) return { error: 'Подключите аккаунт этой записи.' };
+                if (!M.canResume(entry) || activeJob?.id === entry.id) return { error: 'Сначала проверьте результат отправки в MyShows. Повторная отправка остановлена, чтобы не создать дубль.' };
+                delete entry.manualAt; delete entry.code; delete entry.lastError;
+                entry.manualPending = false; entry.attempts = 0; entry.nextAt = 0; entry.threshold = state.threshold;
+                M.transition(entry, entry.progress >= state.threshold ? 'queued' : 'watching', 'Ручная отправка отменена. Продолжаем учитывать фактический просмотр.');
+                return { notice: state.enabled ? 'Отслеживание серии продолжено.' : 'Серия возвращена к отслеживанию. Включите автоматические отметки, чтобы продолжить учёт просмотра.' };
+            });
+            kick(); return result || { error: 'Запись недоступна.' };
+        }
         if (message.type === 'myshows:retry' || message.type === 'myshows:cancel') {
+            let cancelled = false;
             await changeEntry(message.id, (entry, state) => {
-                if (entry.account !== state.account || !['watching', 'queued', 'attention'].includes(entry.status)) return;
-                if (message.type === 'myshows:cancel') { entry.manualPending = false; M.transition(entry, 'cancelled', entry.submittedAt ? errors.paused : 'Автоматическая отметка для этой серии отключена.'); return; }
+                if (entry.account !== state.account) return;
+                if (message.type === 'myshows:cancel') {
+                    if (!M.canCancel(entry)) return;
+                    entry.manualPending = false; entry.nextAt = 0; cancelled = true;
+                    M.transition(entry, 'cancelled', entry.submittedAt ? errors.paused : 'Отправка отменена. Серия не будет отмечена автоматически, пока вы не продолжите отслеживание.'); return;
+                }
                 if (entry.status !== 'attention') return;
                 entry.attempts = 0; entry.nextAt = 0;
                 if (entry.manualAt) entry.manualPending = true;
                 M.transition(entry, entry.submittedAt ? 'checking' : 'queued');
-            }); kick(); return {};
+            });
+            if (cancelled && activeJob?.id === message.id) await closeOwned(activeJob.tabId);
+            kick(); return cancelled ? { notice: 'Синхронизация отменена. Запись сохранена в «Истории».' } : {};
         }
         throw fail('input');
     }
@@ -321,7 +392,7 @@
             if (!M.canForce(entry)) return { notice: entry.status === 'done' ? 'Серия уже отмечена в MyShows.' : 'Серия уже отправлена на синхронизацию. Следите за её статусом в списке.' };
             if (!entry) {
                 const id = crypto.randomUUID();
-                entry = { id, source: 'Rezka Custom · ' + id, key: current.key, account: state.account, episode: current.episode, url: current.url,
+                entry = { id, source: M.sourceFor(id), key: current.key, account: state.account, episode: current.episode, url: current.url,
                     createdAt: Date.now(), duration: 0, ranges: [], progress: 0, status: 'watching', events: [], origin: 'manual' };
                 state.entries.push(entry);
             } else if (current) entry.episode = current.episode;
@@ -348,6 +419,7 @@
         const state = await read();
         for (const id of state.ownedTabs || []) if (id !== state.connectTab) await closeOwned(id);
         await edit(current => {
+            repairRejectedEntries(current);
             current.ownedTabs = current.connectTab ? [current.connectTab] : [];
             if (current.connection === 'connecting') { current.connection = 'error'; current.enabled = false; current.message = 'Подключение прервалось. Нажмите «Подключить MyShows» ещё раз.'; }
         });
