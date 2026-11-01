@@ -167,6 +167,24 @@ const REZKA_SETTINGS = [
     ]
   },
   {
+    "name": "dim-watched",
+    "label": "Приглушать просмотренное",
+    "group": "Интерфейс",
+    "defaultIndex": 1,
+    "options": [
+      {
+        "text": "Выкл",
+        "value": false,
+        "reload": false
+      },
+      {
+        "text": "Вкл",
+        "value": true,
+        "reload": false
+      }
+    ]
+  },
+  {
     "name": "hide-ads",
     "label": "Скрытие рекламных блоков",
     "group": "Интерфейс",

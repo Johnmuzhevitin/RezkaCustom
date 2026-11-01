@@ -41,6 +41,7 @@
         const host = document.createElement('section');
         host.id = 'rc-search-root'; host.hidden = true;
         const root = host.attachShadow({ mode: 'open' });
+        if (typeof RezkaWatched !== 'undefined') RezkaWatched.registerRoot(root);
         const outerStyle = document.createElement('style');
         outerStyle.textContent = `body.rc-search-page .b-content > :not(#rc-search-root),
             body.rc-search-page #main > .b-newest_slider_wrapper,

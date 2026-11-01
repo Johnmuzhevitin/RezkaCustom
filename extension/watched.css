@@ -1,0 +1,11 @@
+/* Intentional low contrast for titles the user has marked as watched.
+   Hover and keyboard focus restore readability without changing navigation. */
+.rc-watched {
+    opacity: .22 !important;
+    filter: grayscale(1) !important;
+}
+.rc-watched:hover,
+.rc-watched:focus-within {
+    opacity: 1 !important;
+    filter: none !important;
+}

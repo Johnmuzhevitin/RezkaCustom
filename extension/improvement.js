@@ -3919,6 +3919,16 @@
     initNavbarLinks();
     initFonts();
     initStyleImprovements();
+    r4.settings.createTumblerSetting({
+        name: "dim-watched",
+        label: "Приглушать просмотренное",
+        submenu: "Интерфейс",
+        classes: ["r4-on-of-tumbler"],
+        options: [
+            { text: "Выкл", value: false },
+            { text: "Вкл", value: true, default: true }
+        ]
+    });
     initHideAds();
     initIMDbRating();
     initAutoPlayNext();
