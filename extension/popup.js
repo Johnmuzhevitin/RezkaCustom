@@ -4,7 +4,6 @@ const sectionCopy = {
     view: ['Под ваш экран', 'Оформление сайта, в котором удобно смотреть.'],
     player: ['Ваш способ смотреть', 'Качество видео, размер плеера, серии и управление.'],
     hide: ['Оставьте главное', 'Уберите отвлекающие блоки и сверните лишнее.'],
-    filter: ['Выберите, что видеть', 'Фильтруйте каталог по странам производства.'],
     myshows: ['MyShows', 'Автоматические отметки, очередь и история синхронизации.']
 };
 const copy = {
@@ -32,9 +31,7 @@ const copy = {
     'hide-info': ['hide', 'Сворачивать описание', 'Информация о фильме под заголовком'],
     'comments-hide': ['hide', 'Сворачивать отзывы', 'Отзывы остаются доступны по нажатию'],
     'more-hide': ['hide', 'Сворачивать рекомендации', 'Блок «Смотреть ещё»'],
-    translators: ['hide', 'Сворачивать список переводов', 'Показывать только выбранный перевод'],
-    'hide-countries-mode': ['filter', 'Действие фильтра', ''],
-    'hide-countries-invert': ['filter', 'Оставлять только выбранные страны', 'Применять фильтр ко всем остальным']
+    translators: ['hide', 'Сворачивать список переводов', 'Показывать только выбранный перевод']
 };
 let data = {}, configs = [], section = 'view', targetTab = null, connected = false;
 let refreshId = 0, searchAnnouncement;
@@ -48,7 +45,7 @@ function el(tag, className, text) {
     return element;
 }
 function details(config) {
-    return copy[config.name] || ['filter', config.label.replace(/ \(.+\)$/, ''), ''];
+    return copy[config.name];
 }
 function indexOf(config) {
     if (optimistic.has(config.name)) return optimistic.get(config.name);
@@ -58,9 +55,9 @@ function indexOf(config) {
 }
 function loadConfigs(live = []) {
     const all = new Map(REZKA_SETTINGS.map(config => [config.name, config]));
-    for (const [key, config] of Object.entries(data)) if (key.startsWith('ui:country:')) all.set(config.name, config);
     for (const config of live) all.set(config.name, config);
-    configs = [...all.values()];
+    // Only settings with a retained menu section belong in the panel or its search.
+    configs = [...all.values()].filter(config => Object.hasOwn(copy, config.name));
 }
 function status(text, error = false) {
     $('#save-status span').textContent = text;
@@ -185,7 +182,7 @@ function widthControl(config) {
 function settingRow(config) {
     const [, label, description] = details(config);
     const binary = config.options.length === 2 && config.options.every(option => ['Выкл', 'Вкл'].includes(option.text));
-    const radio = ['player-scale', 'hide-countries-mode'].includes(config.name);
+    const radio = config.name === 'player-scale';
     const id = 'setting-' + config.name;
     const row = el(binary ? 'label' : 'div', binary ? 'setting setting-toggle' : 'setting');
     const text = el('span', 'setting-text');
@@ -306,15 +303,7 @@ function render() {
         const order = ['styles', 'imdb', 'font', 'navbar-links', 'theme-color-black'];
         selected.sort((a, b) => order.indexOf(a.name) - order.indexOf(b.name));
     }
-    let countryHeading = false;
-    for (const config of selected) {
-        if (!query && section === 'filter' && !copy[config.name] && !countryHeading) {
-            content.append(el('h2', 'group-label', 'Страны в вашем каталоге'));
-            countryHeading = true;
-        }
-        content.append(settingRow(config));
-    }
-    if (!query && section === 'filter' && !countryHeading) content.append(el('p', 'intro', 'Откройте каталог Rezka — здесь появятся страны из списка фильмов.'));
+    for (const config of selected) content.append(settingRow(config));
     if (!query && section === 'player') {
         const keys = el('div', 'key-list');
         for (const [key, label] of [['Space', 'Пауза'], ['F', 'Полный экран'], ['N / P', 'Серии']]) {
@@ -366,7 +355,6 @@ chrome.storage.onChanged.addListener((changes, area) => {
     for (const [key, change] of Object.entries(changes)) {
         if (change.newValue === undefined) delete data[key]; else data[key] = change.newValue;
     }
-    if (Object.keys(changes).some(key => key.startsWith('ui:country:'))) { loadConfigs(); if (section === 'filter') render(); }
     updateControls();
 });
 (async () => {
