@@ -40,11 +40,25 @@ const RezkaMyShowsPanel = (() => {
         const connectButton = button('Подключить MyShows', () => command('connect'), 'myshows-button myshows-primary');
         connection.append(account, connectionDescription, connectButton);
         const currentSection = element('section', 'myshows-current'); currentSection.setAttribute('aria-label', 'Текущая серия');
-        currentSection.append(element('h2', 'myshows-journal-title', 'Текущая серия'));
+        const currentHeading = element('div', 'myshows-current-heading');
+        const currentBody = element('div', 'myshows-current-body');
         const currentTitle = element('h3', 'myshows-account');
         const currentProgress = element('p', 'myshows-progress');
+        const currentCredit = element('span', 'myshows-progress-credit');
+        const currentValue = element('strong', 'myshows-progress-value');
+        currentCredit.append(document.createTextNode('Учтено '), currentValue);
+        const currentThreshold = element('span', 'myshows-progress-threshold');
+        const currentThresholdText = element('span');
+        currentThreshold.append(element('span', 'visually-hidden', ' · '), currentThresholdText);
+        currentProgress.append(currentCredit, currentThreshold);
+        const progressTrack = element('div', 'myshows-progress-track'); progressTrack.hidden = true;
+        const progressMeter = element('progress', 'myshows-progress-meter'); progressMeter.max = 100;
+        progressMeter.setAttribute('aria-label', 'Учтённая часть серии');
+        const thresholdMarker = element('span', 'myshows-threshold-marker'); thresholdMarker.setAttribute('aria-hidden', 'true');
+        progressTrack.append(progressMeter, thresholdMarker);
         const confirmation = element('p', 'myshows-confirmation');
         const currentState = element('p', 'myshows-state'); currentState.tabIndex = -1;
+        currentHeading.append(element('h2', 'myshows-journal-title', 'Текущая серия'), currentState);
         const currentDescription = element('p', 'myshows-description');
         const currentEntry = () => current && state?.entries.find(entry => entry.account === state.account && entry.key === current.key);
         const forceCurrent = button('Засчитать серию', () => {
@@ -59,7 +73,8 @@ const RezkaMyShowsPanel = (() => {
         cancelCurrent.dataset.myshowsCurrent = 'cancel';
         const currentLink = link('Проверить в MyShows', M.historyUrl);
         const currentActions = element('div', 'myshows-actions'); currentActions.append(forceCurrent, retryCurrent, resumeCurrent, cancelCurrent, currentLink);
-        currentSection.append(currentTitle, currentProgress, confirmation, currentState, currentDescription, currentActions);
+        currentBody.append(currentTitle, currentProgress, progressTrack, confirmation, currentDescription, currentActions);
+        currentSection.append(currentHeading, currentBody);
         const message = element('p', 'myshows-message'); message.setAttribute('role', 'status'); message.hidden = true;
         const announcement = element('p', 'visually-hidden'); announcement.setAttribute('role', 'status'); announcement.setAttribute('aria-atomic', 'true');
         const settings = element('details', 'myshows-settings'); settings.open = settingsOpen;
@@ -89,6 +104,7 @@ const RezkaMyShowsPanel = (() => {
         const filters = element('div', 'myshows-filters'); filters.setAttribute('role', 'group'); filters.setAttribute('aria-label', 'Записи синхронизации');
         for (const [value, name] of [['queue', 'Очередь'], ['attention', 'Внимание'], ['history', 'История']]) {
             const node = button(name, () => { filter = selectedFilter = value; limit = 50; renderList(); });
+            node.append(document.createTextNode(' '), element('span', 'myshows-filter-count', '0'));
             node.dataset.filter = value; node.dataset.name = name; filters.append(node);
         }
         const searchSummary = element('p', 'myshows-description'); searchSummary.hidden = true;
@@ -140,7 +156,17 @@ const RezkaMyShowsPanel = (() => {
             const focused = currentSection.contains(document.activeElement) ? document.activeElement : null;
             const entry = currentEntry();
             describe(currentTitle, current ? `${current.episode.title} · ${M.label(current.episode)}` : '');
-            describe(currentProgress, current ? progressText(entry) : '');
+            const hasProgress = !!current && Number.isFinite(entry?.progress);
+            currentProgress.hidden = progressTrack.hidden = !hasProgress;
+            if (hasProgress) {
+                const value = Math.max(0, Math.min(100, Math.floor(entry.progress)));
+                text(currentValue, `${value}%`);
+                text(currentThresholdText, `${connected() && state.enabled ? 'порог' : 'автоотметки на паузе, порог'} ${state.threshold}%`);
+                progressMeter.value = value;
+                progressMeter.setAttribute('aria-valuetext', progressText(entry));
+                progressTrack.style.setProperty('--myshows-threshold', `${state.threshold}%`);
+                thresholdMarker.title = `Порог автоотметки: ${state.threshold}%`;
+            }
             const status = current ? statusText(entry) || (connected() && state.enabled ? 'Ожидаем просмотр' : 'Учёт на паузе') : 'Серия не выбрана';
             describe(currentState, status); currentState.dataset.status = entry?.status || '';
             describe(currentDescription, !current ? 'Откройте серию на Rezka. Если она уже открыта, проверьте подключение страницы вверху панели.'
@@ -190,7 +216,8 @@ const RezkaMyShowsPanel = (() => {
         function createRow(entry) {
             const row = element('article', 'myshows-entry'); row.dataset.id = entry.id;
             const title = element('h3'), episode = element('span', 'myshows-episode'), status = element('span', 'myshows-state');
-            const meta = element('div', 'myshows-entry-meta'); meta.append(episode, status);
+            const identity = element('div', 'myshows-entry-identity'); identity.append(title, episode);
+            const meta = element('div', 'myshows-entry-meta'); meta.append(identity, status);
             const progress = element('p', 'myshows-description'), position = element('p', 'myshows-description'), manual = element('p', 'myshows-description'), reason = element('p', 'myshows-description');
             const actions = element('div', 'myshows-actions');
             const view = { row, title, episode, status, progress, position, manual, reason, entry, actions, buttons: {} };
@@ -202,7 +229,7 @@ const RezkaMyShowsPanel = (() => {
             view.details = element('details', 'myshows-events'); view.details.dataset.id = entry.id;
             view.summary = element('summary'); view.events = element('ol');
             view.details.append(view.summary, view.events);
-            row.append(title, meta, progress, position, manual, reason, actions, view.details);
+            row.append(meta, progress, position, manual, reason, actions, view.details);
             return view;
         }
         function updateRowActions(view) {
@@ -239,7 +266,7 @@ const RezkaMyShowsPanel = (() => {
             const groups = { queue: entries.filter(entry => !M.terminal.has(entry.status) && entry.status !== 'attention'),
                 attention: entries.filter(entry => entry.status === 'attention'), history: entries.filter(entry => M.terminal.has(entry.status)) };
             for (const node of filters.querySelectorAll('button')) {
-                text(node, `${node.dataset.name} ${groups[node.dataset.filter].length}`);
+                text(node.querySelector('.myshows-filter-count'), String(groups[node.dataset.filter].length));
                 node.setAttribute('aria-pressed', String(node.dataset.filter === filter));
             }
             filters.hidden = !!searchQuery;
@@ -287,6 +314,7 @@ const RezkaMyShowsPanel = (() => {
                 if (changed.length) text(announcement, changed.map(entry => `${entry.episode.title}, ${M.label(entry.episode)}: ${labels[entry.status]}.`).join(' '));
             }
             knownStatuses = statuses; state = next;
+            connection.dataset.connected = String(connected());
             text(account, connected() ? `Подключён ${state.account}` : state.connection === 'connecting' ? 'Подключаем MyShows…' : 'MyShows не подключён');
             describe(connectionDescription, connected() ? (state.enabled ? 'Автоотметки включены' : 'Автоотметки на паузе')
                 : 'Войдите в MyShows в этом Chrome. Для подключения нужны существующий токен и доступ к скробблингу (MyShows PRO).');
