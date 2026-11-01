@@ -1,0 +1,32 @@
+{
+  "manifest_version": 3,
+  "name": "Rezka Custom",
+  "version": "0.1.0",
+  "description": "Самостоятельная версия HDrezka Improvement 2.1.8: оформление, плеер, настройки и субтитры.",
+  "minimum_chrome_version": "111",
+  "permissions": ["storage", "declarativeNetRequestWithHostAccess"],
+  "host_permissions": ["http://*/*", "https://*/*"],
+  "background": { "service_worker": "background.js" },
+  "action": { "default_title": "Rezka Custom — настройки" },
+  "options_page": "help.html",
+  "content_scripts": [
+    {
+      "matches": ["http://*/*", "https://*/*"],
+      "include_globs": ["http*://*rezka*/*", "http*://rezkify.com/*", "http*://rezkery.com/*", "http*://kinopub.me/*"],
+      "exclude_matches": ["*://*.home/*", "*://*.local/*"],
+      "js": ["page-bridge.js"],
+      "run_at": "document_start",
+      "all_frames": true,
+      "world": "MAIN"
+    },
+    {
+      "matches": ["http://*/*", "https://*/*"],
+      "include_globs": ["http*://*rezka*/*", "http*://rezkify.com/*", "http*://rezkery.com/*", "http*://kinopub.me/*"],
+      "exclude_matches": ["*://*.home/*", "*://*.local/*"],
+      "js": ["network-policy.js", "gm-adapter.js", "player-client.js", "vendor/r4-fonts.js", "vendor/r4-images.js", "vendor/r4-utils.js", "vendor/r4-settings.js", "improvement.js"],
+      "run_at": "document_start",
+      "all_frames": true,
+      "world": "ISOLATED"
+    }
+  ]
+}

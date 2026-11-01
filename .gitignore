@@ -1,0 +1,22 @@
+node_modules/
+test-results/
+playwright-report/
+dist/
+.browser-profile/
+.browser-binaries/
+*.log
+.scratch/
+.impeccable/hook.cache.json
+.env
+.env.*
+!.env.example
+
+# Local browser captures and machine-specific audit reports
+docs/images/
+.impeccable/review/
+docs/*.detector.json
+*.har
+*.pem
+*.key
+*.p12
+*.pfx

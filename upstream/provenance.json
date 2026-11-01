@@ -1,0 +1,36 @@
+{
+  "files": [
+    {
+      "version": "2.1.8",
+      "sha256": "dd7293f8c3d5011ae7c4bfb0ac6cdbf8f4e69c97d020405088ad716a44c423bf",
+      "source": "HDrezka Improvement 2.1.8; bundled subtitle service key removed before publication",
+      "path": "upstream/hdrezka-improvement-2.1.8.user.js",
+      "originalSha256": "45c6af9d28bef627949222d6417146f8e399055c6d7459a88b0d9884e4e4d6d4"
+    },
+    {
+      "version": "1.6.0",
+      "sha256": "35791ce3e2f55fabc65a50cf719df25669db1203ec2e502c3e0320793f2ecc40",
+      "source": "https://update.greasyfork.org/scripts/482037/1298684/R4%20Fonts.js",
+      "path": "upstream/vendor/r4-fonts.js"
+    },
+    {
+      "version": "1.0.0",
+      "sha256": "65f29b59740ce016927b9e6fd81211cbd6023e070cc14235273a3c104f2e4fee",
+      "source": "https://update.greasyfork.org/scripts/482042/1298685/R4%20Images.js",
+      "path": "upstream/vendor/r4-images.js"
+    },
+    {
+      "version": "1.0.1",
+      "sha256": "27445e84403d2e201c1464636705b6bb12eb2ffd7df39e2d8da00de6f4b14081",
+      "source": "https://update.greasyfork.org/scripts/482597/1301960/R4%20Utils.js",
+      "path": "upstream/vendor/r4-utils.js"
+    },
+    {
+      "version": "1.4.10",
+      "sha256": "91bab63c9ae0921df34af994ba110c4a498217a8fe673b2783fd6afc2063eaeb",
+      "source": "https://update.greasyfork.org/scripts/482052/1854095/R4%20Settings.js",
+      "path": "upstream/vendor/r4-settings.js"
+    }
+  ],
+  "date": "2026-10-30"
+}
