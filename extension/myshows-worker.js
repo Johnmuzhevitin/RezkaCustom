@@ -382,7 +382,12 @@
             const episode = M.validEpisode(reply.episode);
             const url = new URL(tab.url);
             if (!episode || episode.rezkaId !== Number(url.pathname.match(/\/(\d+)-[^/]+\.html$/)?.[1])) return null;
-            return { tabId, episode, key: M.episodeKey(episode), url: url.origin + url.pathname };
+            const key = M.episodeKey(episode), state = await read(), input = reply.playback;
+            const playback = state.enabled && state.connection === 'connected' && input?.account === state.account && input.key === key
+                && Number.isInteger(input.seconds) && input.seconds >= 0 && input.seconds <= M.positionDelay
+                && ['playing', 'paused', 'buffering', 'seeking'].includes(input.state)
+                ? { seconds: input.seconds, state: input.state } : null;
+            return { tabId, episode, key, url: url.origin + url.pathname, playback };
         } catch { return null; }
     }
     async function force(message) {

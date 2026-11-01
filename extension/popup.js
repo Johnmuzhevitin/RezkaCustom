@@ -251,8 +251,9 @@ function updateControls() {
 function render() {
     const query = $('#search-input').value.trim().toLocaleLowerCase('ru');
     clearTimeout(searchAnnouncement);
-    RezkaMyShowsPanel.unmount();
     if (section === 'myshows') {
+        if (RezkaMyShowsPanel.setQuery(query)) return;
+        RezkaMyShowsPanel.unmount();
         content.replaceChildren();
         content.setAttribute('role', 'tabpanel');
         content.setAttribute('aria-labelledby', 'tab-myshows');
@@ -261,6 +262,7 @@ function render() {
         RezkaMyShowsPanel.mount(content, query, () => targetTab);
         return;
     }
+    RezkaMyShowsPanel.unmount();
     // A search has its own heading; the selected tab continues to identify the return destination.
     content.setAttribute('role', query ? 'region' : 'tabpanel');
     content.setAttribute('aria-labelledby', query ? 'results-heading' : 'tab-' + section);
@@ -316,7 +318,7 @@ function render() {
 function selectSection(next, focus = false) {
     section = next;
     $('#search-input').value = '';
-    $('#search-input').placeholder = next === 'myshows' ? 'Найти сериал в записях' : 'Найти настройку';
+    $('#search-input').placeholder = next === 'myshows' ? 'Найти сериал во всём журнале' : 'Найти настройку';
     $('#search-input').setAttribute('aria-label', $('#search-input').placeholder);
     for (const button of document.querySelectorAll('[role="tab"]')) {
         const selected = button.dataset.section === next;

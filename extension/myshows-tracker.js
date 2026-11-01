@@ -4,7 +4,7 @@
     const M = RezkaMyShows;
     let config = { enabled: false, account: '' }, previous = null, flushing = false, stopped = false;
     let video = null, lastFlush = 0, generation = 0, lastKey = '', lastSource = '', waitingSource = null;
-    let positionSeconds = 0, lastDuration = 0;
+    let positionSeconds = 0, lastDuration = 0, advancing = false;
     const pending = new Map(), finished = new Set();
     const text = selector => document.querySelector(selector)?.textContent.trim() || '';
     function identity() {
@@ -49,7 +49,7 @@
             }
         } finally { flushing = false; lastFlush = performance.now(); }
     }
-    function reset() { previous = null; positionSeconds = 0; generation++; }
+    function reset() { previous = null; positionSeconds = 0; advancing = false; generation++; }
     function sample() {
         if (stopped || !config.enabled || !config.account) { reset(); return; }
         const currentVideo = document.querySelector('#cdnplayer video, #player video, video');
@@ -79,6 +79,7 @@
         const current = { key: key + ':' + generation, source: video.currentSrc, time: video.currentTime, wall: performance.now(),
             rate: video.playbackRate, playing: !video.paused && !video.seeking && video.readyState >= 2, seeking: video.seeking };
         const range = M.interval(previous, current);
+        advancing = !!range;
         const confirmation = M.advancePosition(positionSeconds, previous, current);
         const newlyConfirmed = positionSeconds < M.positionDelay && confirmation.seconds >= M.positionDelay;
         positionSeconds = confirmation.seconds;
@@ -97,12 +98,29 @@
         const next = { enabled: !!state?.enabled && state?.connection === 'connected', account: state?.account || '' };
         if (next.account !== config.account || next.enabled !== config.enabled) { flush(); reset(); }
         config = next;
+        // A cancelled, unsent episode can return to tracking without reloading the player.
+        for (const entry of state?.entries || []) {
+            if (entry.account === config.account && entry.status === 'watching' && !entry.submittedAt
+                && finished.delete(entry.account + ':' + entry.key)) reset();
+        }
+    }
+    function playbackSnapshot(episode) {
+        if (!episode || !config.enabled || stopped) return null;
+        const key = M.episodeKey(episode);
+        const selectedVideo = document.querySelector('#cdnplayer video, #player video, video');
+        if (!video || video !== selectedVideo || lastKey !== key || finished.has(config.account + ':' + key)
+            || waitingSource !== null || !previous || previous.key !== key + ':' + generation
+            || previous.source !== video.currentSrc || Math.abs(lastDuration - video.duration) > 5
+            || performance.now() - previous.wall > 2500) return null;
+        return { account: config.account, key, seconds: Math.floor(positionSeconds),
+            state: video.seeking ? 'seeking' : video.paused ? 'paused' : video.readyState < 2 || !advancing ? 'buffering' : 'playing' };
     }
     // A manual mark may be requested before playback starts or while tracking is paused.
     // Only the worker can read this snapshot; it rechecks the selected episode on submit.
     chrome.runtime.onMessage.addListener((message, sender, respond) => {
         if (message?.type !== 'myshows:player-current' || sender.id !== chrome.runtime.id || sender.tab) return;
-        respond({ episode: identity(), build: REZKA_BUILD.id });
+        const episode = identity();
+        respond({ episode, build: REZKA_BUILD.id, playback: playbackSnapshot(episode) });
     });
     chrome.storage.local.get(M.key).then(values => configure(values[M.key])).catch(() => {});
     chrome.storage.onChanged.addListener((changes, area) => { if (area === 'local' && changes[M.key]) configure(changes[M.key].newValue); });

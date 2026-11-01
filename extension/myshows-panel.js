@@ -1,221 +1,319 @@
 const RezkaMyShowsPanel = (() => {
     const M = RezkaMyShows;
     const labels = { watching: 'Смотрю', queued: 'В очереди', sending: 'Отправляем', confirming: 'Подтверждаем', checking: 'Проверяем',
-        attention: 'Нужно внимание', done: 'Отмечено', cancelled: 'Отменено' };
+        attention: 'Нужно внимание', done: 'Отмечено в MyShows', cancelled: 'Отменено' };
     const cancelledDescription = entry => entry.submittedAt
-        ? 'Синхронизация отменена. Запрос уже отправлен: проверьте результат в MyShows. Отмена здесь не снимает отметку на сайте.'
-        : 'Отправка отменена, серия не отмечена этим запросом. Можно продолжить отслеживание по фактическому просмотру.';
-    let dispose = () => {}, selectedFilter = 'queue';
-    const element = (tag, className, text) => {
+        ? 'Запрос уже отправлен. Проверьте результат в MyShows: остановка синхронизации не снимает отметку на сайте.'
+        : 'Отправка отменена. Можно продолжить отслеживание или засчитать серию вручную.';
+    let dispose = () => {}, updateQuery = null, selectedFilter = 'queue', settingsOpen = false;
+    const element = (tag, className, value) => {
         const node = document.createElement(tag);
         if (className) node.className = className;
-        if (text !== undefined) node.textContent = text;
+        if (value !== undefined) node.textContent = value;
         return node;
     };
-    function button(text, action, className = 'myshows-button') {
-        const node = element('button', className, text); node.type = 'button'; node.addEventListener('click', action); return node;
+    const text = (node, value) => { if (node.textContent !== value) node.textContent = value; };
+    const describe = (node, value) => { text(node, value); node.hidden = !value; };
+    function button(name, action, className = 'myshows-button') {
+        const node = element('button', className, name); node.type = 'button'; node.addEventListener('click', action); return node;
     }
-    function link(text, url) {
-        const node = element('a', 'myshows-link', text); node.href = url; node.target = '_blank'; node.rel = 'noopener noreferrer'; return node;
+    function link(name, url) {
+        const node = element('a', 'myshows-link', name); node.href = url; node.target = '_blank'; node.rel = 'noopener noreferrer'; return node;
     }
     const date = time => new Date(time).toLocaleString('ru', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+    const visible = node => node?.isConnected && !node.closest('[hidden]') && !node.disabled;
+    function keepFocus(previous, fallback) {
+        if (!previous) return;
+        if (!visible(previous)) fallback?.focus({ preventScroll: true });
+        else if (document.activeElement !== previous) previous.focus({ preventScroll: true });
+    }
     function mount(root, query = '', getTarget = () => null) {
         dispose();
-        let state = null, closed = false, busy = false, filter = selectedFilter, limit = 50, signature = '';
-        let current = null, currentRequest = 0, currentTabId = null;
-        root.append(element('h1', '', 'MyShows'), element('p', 'intro', 'Смотрите на Rezka — отметки появятся в MyShows автоматически.'));
+        let state = null, closed = false, busy = false, filter = selectedFilter, limit = 50, searchQuery = query;
+        let current = null, currentRequest = 0, currentTabId = null, currentPending = false, searchTimer;
+        let knownStatuses = null, lastConfirmation = '', lastSearch = '', lastStateMessage = '';
+        const rows = new Map();
+        root.append(element('h1', '', 'MyShows'));
         const connection = element('section', 'myshows-connection'); connection.setAttribute('aria-label', 'Подключение MyShows');
         const account = element('p', 'myshows-account', 'Проверяем подключение…');
-        const description = element('p', 'myshows-description');
-        const connectButton = button('Подключить MyShows', () => command('connect'));
-        const disconnectButton = button('Отключить', () => command('disconnect'), 'text-button');
-        const connectionActions = element('div', 'myshows-actions'); connectionActions.append(connectButton, disconnectButton);
-        connection.append(account, description, connectionActions);
+        const connectionDescription = element('p', 'myshows-description');
+        const connectButton = button('Подключить MyShows', () => command('connect'), 'myshows-button myshows-primary');
+        connection.append(account, connectionDescription, connectButton);
+        const currentSection = element('section', 'myshows-current'); currentSection.setAttribute('aria-label', 'Текущая серия');
+        currentSection.append(element('h2', 'myshows-journal-title', 'Текущая серия'));
+        const currentTitle = element('h3', 'myshows-account');
+        const currentProgress = element('p', 'myshows-progress');
+        const confirmation = element('p', 'myshows-confirmation');
+        const currentState = element('p', 'myshows-state'); currentState.tabIndex = -1;
+        const currentDescription = element('p', 'myshows-description');
+        const currentEntry = () => current && state?.entries.find(entry => entry.account === state.account && entry.key === current.key);
+        const forceCurrent = button('Засчитать серию', () => {
+            if (current) command('force', { tabId: current.tabId, key: current.key, account: state.account });
+        }, 'myshows-button myshows-primary');
+        const withCurrent = type => { const entry = currentEntry(); if (entry) command(type, { id: entry.id, account: state.account }); };
+        const retryCurrent = button('Проверить', () => withCurrent('retry'), 'myshows-button myshows-primary');
+        retryCurrent.dataset.myshowsCurrent = 'retry';
+        const resumeCurrent = button('Продолжить отслеживание', () => withCurrent('resume'));
+        resumeCurrent.dataset.myshowsCurrent = 'resume';
+        const cancelCurrent = button('Отменить отправку', () => withCurrent('cancel'), 'text-button');
+        cancelCurrent.dataset.myshowsCurrent = 'cancel';
+        const currentLink = link('Проверить в MyShows', M.historyUrl);
+        const currentActions = element('div', 'myshows-actions'); currentActions.append(forceCurrent, retryCurrent, resumeCurrent, cancelCurrent, currentLink);
+        currentSection.append(currentTitle, currentProgress, confirmation, currentState, currentDescription, currentActions);
+        const message = element('p', 'myshows-message'); message.setAttribute('role', 'status'); message.hidden = true;
+        const announcement = element('p', 'visually-hidden'); announcement.setAttribute('role', 'status'); announcement.setAttribute('aria-atomic', 'true');
+        const settings = element('details', 'myshows-settings'); settings.open = settingsOpen;
+        const settingsSummary = element('summary', '', 'Настройки MyShows');
+        settings.addEventListener('toggle', () => { if (!closed) settingsOpen = settings.open; });
         const enabledLabel = element('label', 'setting setting-toggle');
         const enabledText = element('span', 'setting-text');
         const enabledName = element('span', 'setting-name', 'Автоматические отметки'); enabledName.id = 'myshows-enabled-label';
-        enabledText.append(enabledName, element('span', 'setting-description', 'Новые просмотры и сохранённая очередь'));
-        const enabled = element('input', 'switch'); enabled.type = 'checkbox'; enabled.setAttribute('role', 'switch'); enabled.setAttribute('aria-labelledby', enabledName.id);
+        const enabledDescription = element('span', 'setting-description', 'Учёт просмотра и обработка очереди'); enabledDescription.id = 'myshows-enabled-description';
+        enabledText.append(enabledName, enabledDescription);
+        const enabled = element('input', 'switch'); enabled.type = 'checkbox'; enabled.setAttribute('role', 'switch');
+        enabled.setAttribute('aria-labelledby', enabledName.id); enabled.setAttribute('aria-describedby', enabledDescription.id);
         enabled.addEventListener('change', () => command('configure', { enabled: enabled.checked }));
         enabledLabel.append(enabledText, enabled);
         const thresholdLabel = element('label', 'setting stacked');
-        const thresholdText = element('span', 'setting-text'); thresholdText.append(element('span', 'setting-name', 'Когда отмечать серию'), element('span', 'setting-description', `После перемотки смотрите ещё ${M.positionDelay} секунд — зачтётся позиция плеера. Пауза и загрузка не считаются.`));
-        const threshold = element('select'); threshold.setAttribute('aria-label', 'Просмотренная часть для отметки');
+        const thresholdText = element('span', 'setting-text');
+        const thresholdDescription = element('span', 'setting-description', `После перемотки или продолжения серии с сохранённого места позиция учитывается через ${M.positionDelay} секунд просмотра. Пауза и загрузка не считаются.`);
+        thresholdDescription.id = 'myshows-threshold-description';
+        thresholdText.append(element('span', 'setting-name', 'Когда отмечать серию'), thresholdDescription);
+        const threshold = element('select'); threshold.setAttribute('aria-label', 'Просмотренная часть для отметки'); threshold.setAttribute('aria-describedby', thresholdDescription.id);
         for (const value of [80, 90, 95]) { const option = element('option', '', `${value}% серии`); option.value = value; threshold.append(option); }
         threshold.addEventListener('change', () => command('configure', { threshold: Number(threshold.value) }));
         thresholdLabel.append(thresholdText, threshold);
-        const currentSection = element('section', 'myshows-current'); currentSection.setAttribute('aria-label', 'Текущая серия');
-        currentSection.append(element('h2', 'myshows-journal-title', 'Текущая серия'));
-        const currentTitle = element('p', 'myshows-account');
-        const currentDescription = element('p', 'myshows-description', 'Откройте нужную серию на Rezka. Здесь можно засчитать её, не дожидаясь порога просмотра.');
-        const forceCurrent = button('Засчитать серию', () => {
-            if (current) command('force', { tabId: current.tabId, key: current.key, account: state.account });
-        }); forceCurrent.hidden = true;
-        const currentEntry = () => current && state?.entries.find(entry => entry.account === state.account && entry.key === current.key);
-        const cancelCurrent = button('Отменить отправку', () => {
-            const entry = currentEntry(); if (entry) command('cancel', { id: entry.id });
-        }, 'text-button'); cancelCurrent.dataset.myshowsCurrent = 'cancel'; cancelCurrent.hidden = true;
-        const resumeCurrent = button('Продолжить отслеживание', () => {
-            const entry = currentEntry(); if (entry) command('resume', { id: entry.id, account: state.account });
-        }); resumeCurrent.dataset.myshowsCurrent = 'resume'; resumeCurrent.hidden = true;
-        const currentState = element('p', 'myshows-state'); currentState.hidden = true;
-        const currentLink = link('Проверить в MyShows', M.historyUrl); currentLink.hidden = true;
-        const currentActions = element('div', 'myshows-actions'); currentActions.append(forceCurrent, resumeCurrent, cancelCurrent, currentLink);
-        currentSection.append(currentTitle, currentState, currentDescription, currentActions);
-        const message = element('p', 'myshows-message'); message.setAttribute('role', 'status'); message.setAttribute('aria-live', 'polite'); message.hidden = true;
-        const heading = element('h2', 'myshows-journal-title', 'Синхронизация');
-        const summary = element('p', 'myshows-description');
+        const disconnectButton = button('Отключить MyShows', () => command('disconnect'), 'text-button');
+        settings.append(settingsSummary, enabledLabel, thresholdLabel, disconnectButton);
+        const heading = element('h2', 'myshows-journal-title', 'Журнал синхронизации'); heading.tabIndex = -1;
         const filters = element('div', 'myshows-filters'); filters.setAttribute('role', 'group'); filters.setAttribute('aria-label', 'Записи синхронизации');
         for (const [value, name] of [['queue', 'Очередь'], ['attention', 'Внимание'], ['history', 'История']]) {
-            const node = button(name, () => { filter = selectedFilter = value; limit = 50; signature = ''; renderList(); });
-            node.dataset.filter = value; filters.append(node);
+            const node = button(name, () => { filter = selectedFilter = value; limit = 50; renderList(); });
+            node.dataset.filter = value; node.dataset.name = name; filters.append(node);
         }
+        const searchSummary = element('p', 'myshows-description'); searchSummary.hidden = true;
+        const searchAnnouncement = element('p', 'visually-hidden'); searchAnnouncement.setAttribute('role', 'status'); searchAnnouncement.setAttribute('aria-atomic', 'true');
         const list = element('div', 'myshows-list');
-        const more = button('Показать ещё', () => { limit += 50; signature = ''; renderList(); }, 'text-button'); more.hidden = true;
-        const historyLink = link('Открыть историю в MyShows', M.historyUrl);
-        root.append(connection, enabledLabel, thresholdLabel, currentSection, message, heading, summary, filters, list, more, historyLink);
+        const empty = element('div', 'myshows-empty');
+        const emptyTitle = element('h3'), emptyText = element('p'); empty.append(emptyTitle, emptyText);
+        const more = button('Показать ещё', () => { limit += 50; renderList(); }, 'text-button'); more.hidden = true;
+        root.append(connection, currentSection, message, announcement, settings, heading, filters, searchSummary, searchAnnouncement, list, more, link('Открыть историю в MyShows', M.historyUrl));
+        const connected = () => state?.connection === 'connected';
+        const progressText = entry => Number.isFinite(entry?.progress)
+            ? `Учтено ${Math.floor(entry.progress)}% · ${connected() && state.enabled ? 'порог' : 'автоотметки на паузе, порог'} ${state.threshold}%` : '';
+        const episodeUrl = entry => entry?.episodeId ? `https://myshows.me/view/episode/${entry.episodeId}/` : M.historyUrl;
+        function statusText(entry) {
+            if (entry?.status === 'watching' && (!connected() || !state.enabled)) return 'Учёт на паузе';
+            if (entry?.status === 'queued' && (!connected() || (!state.enabled && !entry.manualPending))) return 'Очередь на паузе';
+            return labels[entry?.status] || '';
+        }
+        function explanation(entry) {
+            if (entry?.status === 'cancelled') return cancelledDescription(entry);
+            if (entry?.reason) return entry.reason;
+            if (entry?.status === 'done') return entry.manualAt ? 'Серия засчитана вручную. Отметка проверена на сайте.' : 'Отметка проверена на сайте.';
+            if (entry?.status === 'attention') return 'Не удалось завершить синхронизацию. Повторите проверку.';
+            if (M.active.has(entry?.status)) return entry.status === 'queued' && (!connected() || (!state.enabled && !entry.manualPending))
+                ? 'Включите автоотметки, чтобы продолжить обработку очереди.' : 'Серия будет отмечена после проверки результата в MyShows.';
+            return connected() && !state.enabled ? 'Учёт просмотра на паузе. Эту серию можно засчитать вручную.' : '';
+        }
         async function command(type, extra = {}) {
             if (busy) return;
-            busy = true; controls();
+            busy = true; controls(); describe(message, '');
             try {
                 const reply = await chrome.runtime.sendMessage({ type: 'myshows:' + type, ...extra });
                 if (!reply?.ok) throw new Error(reply?.error || 'Не удалось выполнить действие. Повторите попытку.');
                 await refresh();
-                if (reply.notice && !closed) { message.hidden = false; message.textContent = reply.notice; }
-            } catch (error) { message.hidden = false; message.textContent = error.message; }
+                if (reply.notice && !closed) describe(message, reply.notice);
+            } catch (error) { if (!closed) describe(message, error.message); }
             finally { busy = false; if (!closed) controls(); }
         }
         function controls() {
-            const connected = state?.connection === 'connected';
             const connecting = state?.connection === 'connecting';
-            enabled.disabled = busy || !connected;
-            threshold.disabled = busy || !state;
-            connectButton.disabled = busy || connecting;
-            disconnectButton.disabled = busy || connecting;
-            connectButton.hidden = connected;
-            disconnectButton.hidden = !connected;
+            enabled.disabled = busy || !connected(); threshold.disabled = busy || !state;
+            if (state) { enabled.checked = state.enabled; threshold.value = state.threshold; }
+            connectButton.disabled = busy || connecting; connectButton.hidden = connected();
+            disconnectButton.disabled = busy || connecting; disconnectButton.hidden = !connected();
+            showCurrent();
+            for (const view of rows.values()) updateRowActions(view);
+        }
+        function showCurrent() {
+            const focused = currentSection.contains(document.activeElement) ? document.activeElement : null;
             const entry = currentEntry();
-            forceCurrent.hidden = !current || (entry?.status === 'cancelled' && !!entry.submittedAt);
-            forceCurrent.disabled = busy || !connected || !current || !M.canForce(entry);
-            forceCurrent.textContent = entry?.status === 'cancelled' && entry.submittedAt ? 'Отменено' : entry?.status === 'done' ? 'Уже отмечено' : entry && !M.canForce(entry)
-                ? (entry.status === 'attention' ? 'Нужна проверка в списке' : 'Уже в синхронизации') : 'Засчитать серию';
+            describe(currentTitle, current ? `${current.episode.title} · ${M.label(current.episode)}` : '');
+            describe(currentProgress, current ? progressText(entry) : '');
+            const status = current ? statusText(entry) || (connected() && state.enabled ? 'Ожидаем просмотр' : 'Учёт на паузе') : 'Серия не выбрана';
+            describe(currentState, status); currentState.dataset.status = entry?.status || '';
+            describe(currentDescription, !current ? 'Откройте серию на Rezka. Если она уже открыта, проверьте подключение страницы вверху панели.'
+                : !connected() ? 'Подключите MyShows, чтобы учитывать просмотр и отмечать серии.'
+                : explanation(entry) || (entry ? '' : 'Запустите просмотр или засчитайте серию вручную.'));
+            forceCurrent.hidden = !current || !M.canForce(entry) || entry?.status === 'attention'; forceCurrent.disabled = busy || !connected();
+            retryCurrent.hidden = entry?.status !== 'attention'; retryCurrent.disabled = busy || !connected();
+            text(retryCurrent, entry?.submittedAt ? 'Проверить' : 'Повторить');
             cancelCurrent.hidden = !M.canCancel(entry); cancelCurrent.disabled = busy;
-            cancelCurrent.textContent = entry?.submittedAt ? 'Остановить синхронизацию' : 'Отменить отправку';
-            resumeCurrent.hidden = !M.canResume(entry); resumeCurrent.disabled = busy || !connected;
-            currentState.hidden = entry?.status !== 'cancelled'; currentState.textContent = entry?.status === 'cancelled' ? 'Отменено' : '';
-            currentLink.hidden = entry?.status !== 'cancelled' || !entry.submittedAt;
-            currentLink.href = entry?.episodeId ? `https://myshows.me/view/episode/${entry.episodeId}/` : M.historyUrl;
-            currentDescription.textContent = entry?.status === 'cancelled' ? cancelledDescription(entry) : current
-                ? 'Засчитать эту серию сейчас, даже если порог просмотра не достигнут. Работает и при выключенных автоотметках.'
-                : 'Откройте нужную серию на Rezka. Если она уже открыта, обновите страницу после обновления расширения.';
-            for (const action of list.querySelectorAll('button')) action.disabled = busy || (action.dataset.requiresConnection === 'true' && !connected);
+            text(cancelCurrent, entry?.submittedAt ? 'Остановить синхронизацию' : 'Отменить отправку');
+            resumeCurrent.hidden = !M.canResume(entry); resumeCurrent.disabled = busy || !connected();
+            currentLink.hidden = !entry?.episodeId && !entry?.submittedAt; currentLink.href = episodeUrl(entry);
+            text(currentLink, entry?.status === 'done' ? 'Серия в MyShows' : 'Проверить в MyShows');
+            const playback = connected() && state.enabled && (!entry || entry.status === 'watching') ? current?.playback : null;
+            let confirmationText = '', phase = '';
+            if (playback) {
+                const complete = playback.seconds >= M.positionDelay;
+                phase = complete ? 'confirmed' : playback.state;
+                confirmationText = complete ? 'Позиция подтверждена просмотром.' : `Подтверждение позиции: ${playback.seconds} из ${M.positionDelay} секунд`;
+                if (!complete && playback.state === 'paused') confirmationText += ' · пауза';
+                else if (!complete && playback.state === 'buffering') confirmationText += ' · ждём воспроизведение';
+                else if (!complete && playback.state === 'seeking') confirmationText += ' · перемотка';
+            }
+            describe(confirmation, confirmationText);
+            const confirmationKey = current ? `${current.key}:${phase}` : '';
+            if (confirmationKey !== lastConfirmation) {
+                if (phase) text(announcement, `${current.episode.title}. ${phase === 'confirmed' ? 'Позиция подтверждена просмотром.'
+                    : phase === 'paused' ? 'Подтверждение позиции на паузе.' : phase === 'buffering' ? 'Ждём воспроизведение для подтверждения позиции.'
+                        : `Подтверждаем позицию за ${M.positionDelay} секунд просмотра.`}`);
+                lastConfirmation = confirmationKey;
+            }
+            keepFocus(focused, currentState);
         }
         async function refreshCurrent() {
-            const request = ++currentRequest;
             const tabId = getTarget()?.id;
-            if (currentTabId !== tabId) { current = null; currentTabId = tabId; showCurrent(); }
-            if (!Number.isInteger(tabId)) return;
+            if (currentTabId !== tabId) { current = null; currentTabId = tabId; ++currentRequest; showCurrent(); }
+            if (!Number.isInteger(tabId) || currentPending) return;
+            const request = ++currentRequest; currentPending = true;
             try {
                 const reply = await chrome.runtime.sendMessage({ type: 'myshows:current', tabId });
                 if (closed || request !== currentRequest || getTarget()?.id !== tabId) return;
                 current = reply?.ok ? reply.current : null;
             } catch { if (!closed && request === currentRequest) current = null; }
+            finally { currentPending = false; }
             if (!closed && request === currentRequest) showCurrent();
         }
-        function showCurrent() {
-            currentTitle.textContent = current ? `${current.episode.title} · ${M.label(current.episode)}` : '';
-            currentTitle.hidden = !current;
-            controls();
+        function createRow(entry) {
+            const row = element('article', 'myshows-entry'); row.dataset.id = entry.id;
+            const title = element('h3'), episode = element('span', 'myshows-episode'), status = element('span', 'myshows-state');
+            const meta = element('div', 'myshows-entry-meta'); meta.append(episode, status);
+            const progress = element('p', 'myshows-description'), position = element('p', 'myshows-description'), manual = element('p', 'myshows-description'), reason = element('p', 'myshows-description');
+            const actions = element('div', 'myshows-actions');
+            const view = { row, title, episode, status, progress, position, manual, reason, entry, actions, buttons: {} };
+            for (const [type, name] of [['resume', 'Продолжить отслеживание'], ['force', 'Засчитать серию'], ['retry', 'Проверить'], ['cancel', 'Отменить отправку']]) {
+                const node = button(name, () => command(type, { id: view.entry.id, account: state.account }), 'text-button');
+                node.dataset.myshowsAction = entry.id + '-' + type; view.buttons[type] = node; actions.append(node);
+            }
+            view.link = link('Серия в MyShows', episodeUrl(entry)); actions.append(view.link);
+            view.details = element('details', 'myshows-events'); view.details.dataset.id = entry.id;
+            view.summary = element('summary'); view.events = element('ol');
+            view.details.append(view.summary, view.events);
+            row.append(title, meta, progress, position, manual, reason, actions, view.details);
+            return view;
+        }
+        function updateRowActions(view) {
+            const { entry, buttons } = view;
+            buttons.resume.hidden = !M.canResume(entry); buttons.force.hidden = !M.canForce(entry);
+            buttons.retry.hidden = entry.status !== 'attention'; buttons.cancel.hidden = !M.canCancel(entry);
+            text(buttons.retry, entry.submittedAt ? 'Проверить' : 'Повторить');
+            text(buttons.cancel, entry.submittedAt ? 'Остановить синхронизацию' : 'Отменить отправку');
+            for (const [type, node] of Object.entries(buttons)) node.disabled = busy || (type !== 'cancel' && !connected());
+            view.link.hidden = !entry.episodeId && !entry.submittedAt; view.link.href = episodeUrl(entry);
+            text(view.link, entry.episodeId ? 'Серия в MyShows' : 'Проверить в MyShows');
+        }
+        function updateRow(view, entry) {
+            view.entry = entry;
+            text(view.title, entry.episode.title); text(view.episode, M.label(entry.episode));
+            text(view.status, statusText(entry)); view.status.dataset.status = entry.status;
+            describe(view.progress, entry.status === 'watching' ? progressText(entry) : '');
+            describe(view.position, entry.status === 'watching' && entry.confirmedPosition > 0 && entry.progress > entry.watchedProgress
+                ? 'По позиции плеера, подтверждённой просмотром' : '');
+            describe(view.manual, entry.manualAt ? (entry.status === 'done' ? 'Засчитано вручную' : 'Добавлено вручную') : '');
+            describe(view.reason, explanation(entry));
+            text(view.summary, 'История · ' + date(entry.updatedAt || entry.createdAt));
+            const eventSignature = JSON.stringify([entry.createdAt, entry.origin, entry.events]);
+            if (eventSignature !== view.eventSignature) {
+                view.eventSignature = eventSignature;
+                view.events.replaceChildren(element('li', '', date(entry.createdAt) + (entry.origin === 'manual' ? ' · Добавлена вручную' : ' · Начат просмотр')));
+                for (const event of entry.events || []) view.events.append(element('li', '', `${date(event.at)} · ${labels[event.status] || event.status}${event.reason ? '. ' + event.reason : ''}`));
+            }
+            updateRowActions(view);
         }
         function renderList() {
             if (!state || closed) return;
             const entries = state.entries.filter(entry => entry.account === state.account);
-            const queue = entries.filter(entry => !M.terminal.has(entry.status) && entry.status !== 'attention');
-            const attention = entries.filter(entry => entry.status === 'attention');
-            const done = entries.filter(entry => entry.status === 'done');
-            summary.textContent = `В очереди и в просмотре: ${queue.length} · Нужно внимание: ${attention.length} · Отмечено: ${done.length} · Отменено: ${entries.filter(entry => entry.status === 'cancelled').length}`;
-            filters.querySelectorAll('button').forEach(node => node.setAttribute('aria-pressed', String(node.dataset.filter === filter)));
-            let items = (filter === 'queue' ? queue : filter === 'attention' ? attention : entries.filter(entry => M.terminal.has(entry.status)))
-                .filter(entry => `${entry.episode.title} ${entry.episode.originalTitle} ${M.label(entry.episode)}`.toLocaleLowerCase('ru').includes(query))
+            const groups = { queue: entries.filter(entry => !M.terminal.has(entry.status) && entry.status !== 'attention'),
+                attention: entries.filter(entry => entry.status === 'attention'), history: entries.filter(entry => M.terminal.has(entry.status)) };
+            for (const node of filters.querySelectorAll('button')) {
+                text(node, `${node.dataset.name} ${groups[node.dataset.filter].length}`);
+                node.setAttribute('aria-pressed', String(node.dataset.filter === filter));
+            }
+            filters.hidden = !!searchQuery;
+            const items = (searchQuery ? entries.filter(entry => `${entry.episode.title} ${entry.episode.originalTitle || ''} ${M.label(entry.episode)}`.toLocaleLowerCase('ru').includes(searchQuery)) : groups[filter])
                 .sort((a, b) => b.updatedAt - a.updatedAt);
-            const nextSignature = JSON.stringify(items.slice(0, limit).map(e => [e.id, e.status, e.reason, Math.floor(e.progress), e.events, e.nextAt, e.manualAt, e.manualPending, e.submittedAt, e.episodeId]));
-            if (signature === nextSignature) return;
-            signature = nextSignature;
-            const focused = document.activeElement?.dataset.myshowsAction;
-            const expanded = new Set([...list.querySelectorAll('details[open]')].map(node => node.dataset.id));
-            list.replaceChildren();
-            if (!items.length) {
-                const empty = element('div', 'myshows-empty');
-                empty.append(element('h3', '', query ? 'Ничего не найдено' : filter === 'history' ? 'Отметки появятся здесь' : filter === 'attention' ? 'Всё в порядке' : 'Очередь пуста'),
-                    element('p', '', query ? 'Попробуйте название сериала или номер S01E01.' : filter === 'history' ? 'Здесь сохраняются результаты и история каждой синхронизации.' : filter === 'attention' ? 'Серий, требующих проверки, нет.' : 'Подключите MyShows и начните смотреть серию. Просмотр появится здесь примерно через 10 секунд.'));
+            describe(searchSummary, searchQuery ? `Результаты во всём журнале: ${items.length}` : '');
+            const searchKey = searchQuery ? `${searchQuery}:${items.length}` : '';
+            if (searchKey !== lastSearch) {
+                lastSearch = searchKey; clearTimeout(searchTimer);
+                if (searchQuery) searchTimer = setTimeout(() => text(searchAnnouncement, `По запросу «${searchQuery}» найдено во всём журнале: ${items.length}.`), 250);
+                else text(searchAnnouncement, '');
+            }
+            const focused = list.contains(document.activeElement) || document.activeElement === more ? document.activeElement : null;
+            const liveIds = new Set(entries.map(entry => entry.id));
+            for (const [id, view] of rows) if (!liveIds.has(id)) { view.row.remove(); rows.delete(id); }
+            const shown = items.slice(0, limit), shownIds = new Set(shown.map(entry => entry.id));
+            for (const child of [...list.children]) if (!shownIds.has(child.dataset.id)) child.remove();
+            if (!shown.length) {
+                text(emptyTitle, searchQuery ? 'Ничего не найдено' : filter === 'history' ? 'История пока пуста' : filter === 'attention' ? 'Всё в порядке' : 'Очередь пуста');
+                text(emptyText, searchQuery ? 'Проверены очередь, проблемы и история. Попробуйте название сериала или номер S01E01.'
+                    : filter === 'history' ? 'Здесь будут отмеченные и отменённые серии.' : filter === 'attention' ? 'Серий, требующих проверки, нет.'
+                        : !connected() ? 'Подключите MyShows, чтобы отмечать просмотренные серии.' : !state.enabled ? 'Автоотметки на паузе. Можно засчитать текущую серию вручную.'
+                            : 'Начните смотреть серию. Прогресс появится примерно через 10 секунд.');
                 list.append(empty);
             }
-            for (const entry of items.slice(0, limit)) {
-                const row = element('article', 'myshows-entry');
-                row.append(element('h3', '', entry.episode.title));
-                const meta = element('div', 'myshows-entry-meta');
-                meta.append(element('span', 'myshows-episode', M.label(entry.episode)), element('span', 'myshows-state', labels[entry.status] || 'Нужно внимание'));
-                meta.lastChild.dataset.status = entry.status; row.append(meta);
-                if (entry.status === 'watching') {
-                    row.append(element('p', 'myshows-description', `Учтено ${Math.floor(entry.progress)}% · Отметим после ${state.threshold}%`));
-                    if (entry.confirmedPosition > 0 && entry.progress > entry.watchedProgress) row.append(element('p', 'myshows-description', 'По позиции плеера, подтверждённой просмотром'));
-                }
-                if (entry.manualAt) row.append(element('p', 'myshows-description', 'По кнопке «Засчитать серию»'));
-                if (entry.status === 'cancelled' || entry.reason) row.append(element('p', 'myshows-description', entry.status === 'cancelled' ? cancelledDescription(entry) : entry.reason));
-                const actions = element('div', 'myshows-actions');
-                if (M.canResume(entry)) {
-                    const resume = button('Продолжить отслеживание', () => command('resume', { id: entry.id, account: state.account }), 'text-button');
-                    resume.dataset.myshowsAction = entry.id + '-resume'; resume.dataset.requiresConnection = 'true'; actions.append(resume);
-                }
-                if (M.canForce(entry)) {
-                    const force = button('Засчитать серию', () => command('force', { id: entry.id, account: state.account }), 'text-button');
-                    force.dataset.myshowsAction = entry.id + '-force'; force.dataset.requiresConnection = 'true'; actions.append(force);
-                }
-                if (entry.status === 'attention') {
-                    const retry = button(entry.submittedAt ? 'Проверить' : 'Повторить', () => command('retry', { id: entry.id }), 'text-button');
-                    retry.dataset.myshowsAction = entry.id + '-retry'; actions.append(retry);
-                }
-                if (M.canCancel(entry)) {
-                    const cancel = button(entry.submittedAt ? 'Остановить синхронизацию' : 'Отменить отправку', () => command('cancel', { id: entry.id }), 'text-button');
-                    cancel.dataset.myshowsAction = entry.id + '-cancel'; actions.append(cancel);
-                }
-                if (entry.episodeId) actions.append(link('Серия в MyShows', `https://myshows.me/view/episode/${entry.episodeId}/`));
-                else if (entry.submittedAt) actions.append(link('Проверить в MyShows', M.historyUrl));
-                row.append(actions);
-                const details = element('details', 'myshows-events'); details.dataset.id = entry.id; details.open = expanded.has(entry.id);
-                details.append(element('summary', '', 'История · ' + date(entry.updatedAt || entry.createdAt)));
-                const events = element('ol');
-                events.append(element('li', '', date(entry.createdAt) + (entry.origin === 'manual' ? ' · Добавлена вручную' : ' · Начат просмотр')));
-                for (const event of entry.events || []) events.append(element('li', '', `${date(event.at)} · ${labels[event.status] || event.status}${event.reason ? '. ' + event.reason : ''}`));
-                details.append(events); row.append(details); list.append(row);
-            }
+            shown.forEach((entry, index) => {
+                let view = rows.get(entry.id); if (!view) { view = createRow(entry); rows.set(entry.id, view); }
+                updateRow(view, entry);
+                if (list.children[index] !== view.row) list.insertBefore(view.row, list.children[index] || null);
+            });
             more.hidden = items.length <= limit;
-            if (focused) [...list.querySelectorAll('button')].find(node => node.dataset.myshowsAction === focused)?.focus();
-            controls();
+            keepFocus(focused, searchQuery ? heading : filters.querySelector(`[data-filter="${filter}"]`));
         }
         function update(value) {
             if (closed) return;
-            state = value || M.initial();
-            const connected = state.connection === 'connected';
-            account.textContent = connected ? `Подключён ${state.account}` : state.connection === 'connecting' ? 'Подключаем MyShows…' : 'MyShows не подключён';
-            description.textContent = connected ? (state.enabled ? 'Отметки и очередь обрабатываются автоматически.' : 'Автоотметки на паузе. Можно засчитать отдельную серию вручную.')
-                : 'Откроем MyShows и подключим существующий API-токен. Нужны вход в аккаунт в этом Chrome и доступ к скробблингу (MyShows PRO).';
-            enabled.checked = state.enabled; threshold.value = state.threshold;
-            message.textContent = state.message || ''; message.hidden = !state.message;
+            const next = value || M.initial();
+            if (state && (next.enabled !== state.enabled || next.account !== state.account || next.connection !== state.connection)) {
+                ++currentRequest;
+                if (current) current = { ...current, playback: null };
+            }
+            const statuses = new Map(next.entries.filter(entry => entry.account === next.account).map(entry => [entry.id, entry.status]));
+            if (knownStatuses && state?.account === next.account) {
+                const changed = next.entries.filter(entry => entry.account === next.account && knownStatuses.get(entry.id) !== entry.status
+                    && ['done', 'attention', 'cancelled'].includes(entry.status));
+                if (changed.length) text(announcement, changed.map(entry => `${entry.episode.title}, ${M.label(entry.episode)}: ${labels[entry.status]}.`).join(' '));
+            }
+            knownStatuses = statuses; state = next;
+            text(account, connected() ? `Подключён ${state.account}` : state.connection === 'connecting' ? 'Подключаем MyShows…' : 'MyShows не подключён');
+            describe(connectionDescription, connected() ? (state.enabled ? 'Автоотметки включены' : 'Автоотметки на паузе')
+                : 'Войдите в MyShows в этом Chrome. Для подключения нужны существующий токен и доступ к скробблингу (MyShows PRO).');
+            if (state.message || lastStateMessage) describe(message, state.message || '');
+            lastStateMessage = state.message || '';
             renderList(); controls();
         }
         async function refresh() {
             const reply = await chrome.runtime.sendMessage({ type: 'myshows:state' });
-            if (!reply?.ok) throw new Error('Не удалось загрузить очередь. Откройте раздел заново.');
+            if (!reply?.ok) throw new Error('Не удалось загрузить журнал. Откройте раздел заново.');
             update(reply.state);
         }
         const listener = (changes, area) => { if (area === 'local' && changes[M.key]) update(changes[M.key].newValue); };
         chrome.storage.onChanged.addListener(listener);
-        refresh().catch(error => { if (!closed) { account.textContent = 'Не удалось загрузить MyShows'; message.textContent = error.message; message.hidden = false; } });
+        updateQuery = value => {
+            if (closed) return false;
+            value = value.trim().toLocaleLowerCase('ru');
+            if (value !== searchQuery) { searchQuery = value; limit = 50; renderList(); }
+            if (currentTabId !== getTarget()?.id) refreshCurrent();
+            return true;
+        };
+        controls();
+        refresh().catch(error => { if (!closed) { text(account, 'Не удалось загрузить MyShows'); describe(message, error.message); } });
         refreshCurrent();
-        const currentTimer = setInterval(refreshCurrent, 2000);
-        dispose = () => { closed = true; ++currentRequest; clearInterval(currentTimer); chrome.storage.onChanged.removeListener(listener); };
+        const currentTimer = setInterval(refreshCurrent, 1000);
+        dispose = () => { closed = true; ++currentRequest; settingsOpen = settings.open; clearInterval(currentTimer); clearTimeout(searchTimer); chrome.storage.onChanged.removeListener(listener); updateQuery = null; };
         return dispose;
     }
-    return { mount, unmount: () => dispose() };
+    return { mount, setQuery: query => updateQuery?.(query) || false, unmount: () => dispose() };
 })();
