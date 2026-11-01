@@ -12,6 +12,11 @@
 
 /* Keep the site's table, ordering and native actions inside one filtered panel. */
 #videosaves-list > .rc-history-hidden { display: none !important; }
+/* Completed records are already separated by a tab; keep them readable at rest. */
+.rc-history-tabs + #videosaves-list .rc-watched {
+    opacity: 1 !important;
+    filter: none !important;
+}
 .rc-history-tabs {
     display: flex;
     gap: 24px;
