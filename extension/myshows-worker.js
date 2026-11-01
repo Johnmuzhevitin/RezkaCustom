@@ -357,7 +357,7 @@
                     if (state.enabled) state.message = '';
                     else for (const entry of state.entries) entry.manualPending = false;
                 }
-                if ([80, 90, 95].includes(message.threshold)) state.threshold = message.threshold;
+                if (Number.isInteger(message.threshold) && message.threshold >= 1 && message.threshold <= 100) state.threshold = message.threshold;
                 for (const entry of state.entries) {
                     if (entry.account === state.account && entry.status === 'watching' && entry.progress >= state.threshold) {
                         entry.threshold = state.threshold; M.transition(entry, 'queued');

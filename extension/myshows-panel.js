@@ -33,6 +33,7 @@ const RezkaMyShowsPanel = (() => {
         let state = null, closed = false, busy = false, filter = selectedFilter, limit = 50, searchQuery = query;
         let current = null, currentRequest = 0, currentTabId = null, currentPending = false, searchTimer;
         let knownStatuses = null, lastConfirmation = '', lastSearch = '', lastStateMessage = '';
+        let thresholdDraft = null;
         const rows = new Map();
         root.append(element('h1', '', 'MyShows'));
         const connection = element('section', 'myshows-connection'); connection.setAttribute('aria-label', 'Подключение MyShows');
@@ -98,10 +99,28 @@ const RezkaMyShowsPanel = (() => {
         const thresholdDescription = element('span', 'setting-description', `После перемотки или продолжения с сохранённого места позиция учитывается через ${M.positionDelay} секунд просмотра. Пауза и загрузка не считаются.`);
         thresholdDescription.id = 'myshows-threshold-description';
         thresholdText.append(element('span', 'setting-name', 'Когда отмечать просмотр'), thresholdDescription);
-        const threshold = element('select'); threshold.setAttribute('aria-label', 'Просмотренная часть для отметки'); threshold.setAttribute('aria-describedby', thresholdDescription.id);
-        for (const value of [80, 90, 95]) { const option = element('option', '', `${value}% просмотра`); option.value = value; threshold.append(option); }
-        threshold.addEventListener('change', () => command('configure', { threshold: Number(threshold.value) }));
-        thresholdLabel.append(thresholdText, threshold);
+        const thresholdControl = element('span', 'myshows-threshold-control');
+        const threshold = element('input'); threshold.type = 'range'; threshold.min = '1'; threshold.max = '100'; threshold.step = '1';
+        threshold.setAttribute('aria-label', 'Просмотренная часть для отметки'); threshold.setAttribute('aria-describedby', thresholdDescription.id);
+        const thresholdValue = element('span', 'myshows-threshold-value'); thresholdValue.setAttribute('aria-hidden', 'true');
+        function renderThreshold() {
+            threshold.value = thresholdDraft ?? state?.threshold ?? M.initial().threshold;
+            text(thresholdValue, `${threshold.value}%`);
+            threshold.setAttribute('aria-valuetext', `${threshold.value}% просмотра`);
+        }
+        threshold.addEventListener('input', () => { thresholdDraft = Number(threshold.value); renderThreshold(); });
+        threshold.addEventListener('change', async () => {
+            thresholdDraft = Number(threshold.value);
+            const focused = document.activeElement === threshold;
+            await command('configure', { threshold: thresholdDraft });
+            thresholdDraft = null;
+            if (!closed) {
+                renderThreshold();
+                if (focused && document.activeElement === document.body) threshold.focus({ preventScroll: true });
+            }
+        });
+        thresholdControl.append(threshold, thresholdValue);
+        thresholdLabel.append(thresholdText, thresholdControl);
         const disconnectButton = button('Отключить MyShows', () => command('disconnect'), 'text-button');
         settings.append(settingsSummary, enabledLabel, thresholdLabel, disconnectButton);
         const heading = element('h2', 'myshows-journal-title', 'Журнал синхронизации'); heading.tabIndex = -1;
@@ -151,7 +170,8 @@ const RezkaMyShowsPanel = (() => {
         function controls() {
             const connecting = state?.connection === 'connecting';
             enabled.disabled = busy || !connected(); threshold.disabled = busy || !state;
-            if (state) { enabled.checked = state.enabled; threshold.value = state.threshold; }
+            if (state) enabled.checked = state.enabled;
+            renderThreshold();
             connectButton.disabled = busy || connecting; connectButton.hidden = connected();
             disconnectButton.disabled = busy || connecting; disconnectButton.hidden = !connected();
             showCurrent();

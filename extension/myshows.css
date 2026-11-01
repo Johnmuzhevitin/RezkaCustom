@@ -77,3 +77,9 @@
     .myshows-progress-meter { appearance:auto; }
     .myshows-threshold-marker { background:CanvasText; forced-color-adjust:none; }
 }
+
+.myshows-threshold-marker { position:absolute; left:var(--myshows-threshold); top:-3px; width:2px; height:12px; margin-left:-1px; border-radius:1px; background:var(--muted); }
+.myshows-threshold-control { display:flex; align-items:center; gap:12px; min-height:40px; }
+.myshows-threshold-control input { flex:1; min-width:0; height:40px; margin:0; accent-color:var(--accent); cursor:pointer; }
+.myshows-threshold-control input:disabled { cursor:default; }
+.myshows-threshold-value { min-width:4ch; text-align:right; font-variant-numeric:tabular-nums; }
