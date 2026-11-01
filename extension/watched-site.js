@@ -76,7 +76,8 @@ const RezkaWatchedSite = (() => {
             if (!match || match[2] !== id || Number(match[3]) < 1) continue;
             const episode = match[1] === 'Series'
                 ? script.textContent.slice(match.index + match[0].length).match(/^\s*(\d+)\s*,\s*(\d+)\s*,/) : null;
-            if (match[1] === 'Series' && (!episode || Number(episode[1]) < 1 || Number(episode[2]) < 1)) continue;
+            // Multipart films use season 0 in the native series player; parts still start at 1.
+            if (match[1] === 'Series' && (!episode || Number(episode[2]) < 1)) continue;
             fields = { post_id: id, translator_id: match[3], season: episode?.[1] || '0',
                 episode: episode?.[2] || '0', current_time: '0', duration: '0' };
             break;
