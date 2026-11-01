@@ -1,4 +1,4 @@
-/* Intentional low contrast for titles the user has marked as watched.
+/* Intentional low contrast for watched titles outside the dedicated history.
    Hover and keyboard focus restore readability without changing navigation. */
 .rc-watched {
     opacity: .10 !important;
@@ -9,6 +9,45 @@
     opacity: 1 !important;
     filter: none !important;
 }
+
+/* Keep the site's table, ordering and native actions inside one filtered panel. */
+#videosaves-list > .rc-history-hidden { display: none !important; }
+.rc-history-tabs {
+    display: flex;
+    gap: 24px;
+    margin: 0 0 16px;
+    border-bottom: 1px solid rgb(127 127 127 / 25%);
+    font-size: 14px;
+    line-height: 1.4;
+}
+.rc-history-tabs > button {
+    appearance: none;
+    min-height: 40px;
+    margin: 0 0 -1px;
+    padding: 8px 2px;
+    border: 0;
+    border-bottom: 2px solid transparent;
+    border-radius: 0;
+    background: none;
+    box-shadow: none;
+    color: inherit;
+    font: inherit;
+    font-weight: 600;
+    text-shadow: none;
+    cursor: pointer;
+    opacity: .7;
+}
+.rc-history-tabs > button[aria-selected="true"] {
+    border-bottom-color: currentColor;
+    opacity: 1;
+}
+.rc-history-tabs > button:hover { opacity: 1; }
+.rc-history-tabs > button:focus-visible,
+#videosaves-list:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 3px;
+}
+.rc-history-empty { margin: 20px 0; font-size: 14px; }
 
 /* Fade content, keeping the small action available even on a watched card. */
 .rc-watched-card { position: relative; }
