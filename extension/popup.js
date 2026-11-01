@@ -164,12 +164,7 @@ function widthControl(config) {
     const panel = el('section', 'viewport-panel');
     const heading = el('div', 'viewport-heading');
     heading.append(el('span', '', 'Ширина страницы'), el('output', '', ''));
-    const viewport = el('div', 'viewport');
-    viewport.setAttribute('aria-hidden', 'true');
-    const mini = el('div', 'mini-page');
-    mini.append(el('div', 'mini-nav'), el('div', 'mini-player'), el('div', 'mini-lines'));
-    viewport.append(mini);
-    panel.append(heading, viewport, segments(config, 'Ширина страницы'));
+    panel.append(heading, segments(config, 'Ширина страницы'));
     return panel;
 }
 function settingRow(config) {
@@ -239,7 +234,6 @@ function updateControls() {
     if ($('.viewport-panel') && width) {
         const index = indexOf(width);
         $('.viewport-panel output').textContent = index === 5 ? 'На всю ширину' : optionText(width, index) + ' px';
-        $('.mini-page').style.setProperty('--preview-width', [42, 62, 72, 82, 92, 100][index] + '%');
     }
 }
 function render() {
@@ -273,7 +267,7 @@ function render() {
         empty.append(clear);
         content.append(empty);
     }
-    // Keep the viewport and related choices together, ahead of miscellaneous rows.
+    // Keep the width choices together, ahead of miscellaneous rows.
     if (!query && section === 'view') {
         const width = selected.find(config => config.name === 'content-size');
         content.append(widthControl(width));

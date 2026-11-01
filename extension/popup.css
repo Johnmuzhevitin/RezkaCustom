@@ -16,8 +16,6 @@
     --notice-surface:#e8edf9;
     --error-ink:#9a3139;
     --error-surface:#fce9ec;
-    --diagram-ink:#5b6b9e;
-    --diagram-line:#c4ccdf;
     --selection-shadow:0 1px 3px #222a3b14;
     --font-family:"Segoe UI Variable", "Segoe UI", system-ui, sans-serif;
     --text-small:.75rem;
@@ -97,15 +95,8 @@ select { appearance:auto; width:100%; min-height:40px; padding:9px 10px; border-
 .segments button:hover { background:var(--canvas); color:var(--ink); }
 .segments button[aria-checked="true"] { color:var(--accent); background:var(--surface); box-shadow:var(--selection-shadow); font-weight:600; }
 .viewport-panel { border:1px solid var(--line); border-radius:var(--radius-panel); padding:13px; background:var(--surface); margin-top:13px; }
-.viewport-heading { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:baseline; gap:4px 8px; font-weight:600; }
+.viewport-heading { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:baseline; gap:4px 8px; margin-bottom:10px; font-weight:600; }
 .viewport-heading output { font-size:var(--text-small); font-weight:400; color:var(--accent); font-variant-numeric:tabular-nums; }
-.viewport { height:53px; margin:10px 0; background:var(--subtle-surface); border-radius:5px; overflow:hidden; position:relative; border:1px solid var(--line); }
-.viewport::before { content:""; display:block; height:11px; background:var(--line); border-bottom:1px solid var(--diagram-line); }
-.mini-page { height:42px; width:var(--preview-width, 62%); margin:0 auto; padding:5px; background:var(--surface); }
-.mini-nav { width:54%; height:3px; background:var(--diagram-line); border-radius:1px; margin:0 0 5px; }
-.mini-player { display:grid; place-items:center; height:23px; background:var(--diagram-ink); border-radius:2px; }
-.mini-player::before { content:""; width:6px; height:8px; background:var(--surface); clip-path:polygon(0 0, 100% 50%, 0 100%); }
-.mini-lines { height:3px; width:70%; background:var(--diagram-line); margin-top:5px; }
 .key-list { margin-top:17px; display:flex; flex-wrap:wrap; gap:8px 14px; color:var(--muted); font-size:var(--text-small); }
 .key-list span { display:inline-flex; gap:5px; align-items:center; }
 .key-list kbd { font:inherit; border:1px solid var(--line); background:var(--surface); border-radius:4px; padding:2px 5px; color:var(--ink); }
