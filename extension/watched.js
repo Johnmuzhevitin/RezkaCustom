@@ -1,4 +1,4 @@
-// Read the site's own watched marks; never infer them from visits or playback.
+// Explicit account marks and compact card actions; never infer watched from playback.
 const RezkaWatched = (() => {
     const noop = { registerRoot() {} };
     if (window.top !== window || !RezkaNetwork.isSite(location.href)) return noop;
@@ -6,29 +6,88 @@ const RezkaWatched = (() => {
     const REVISION = 'ui:watched-revision';
     const ROW = '.b-videosaves__list_item';
     const CARD = '.b-content__inline_item, .b-seriesupdate__block_list_item, .card';
+    const ACTION_CARD = '.b-content__inline_item, article.card';
     const roots = new Map();
     let enabled = false, initialized = false, preferenceRevision = 0;
     let watched = new Set(), marked = new Set(), liveStates;
     let scanTimer, request, refreshAgain = false, generation = 0, lastRefresh = 0;
+    let saving, noticeTimer;
+    const { titleID } = RezkaWatchedSite;
 
-    function titleID(href) {
-        if (!href) return null;
-        try {
-            const url = new URL(href, location.origin);
-            if (!RezkaNetwork.isSite(url.href) || url.username || url.password) return null;
-            return url.pathname.match(/^\/(?:films|series|cartoons|animation|show)\/[^/]+\/(\d+)-[^/]+\.html$/)?.[1] || null;
-        } catch { return null; }
-    }
     function readList(doc) {
-        const list = doc.querySelector('#videosaves-list');
-        if (!list) return null; // Login/error pages must not replace a known list.
-        const ids = new Set();
-        for (const row of list.querySelectorAll(ROW)) {
-            if (!row.classList.contains('watched-row') && !row.querySelector('.view.watched')) continue;
-            const id = titleID(row.querySelector('.title a[href]')?.getAttribute('href'));
-            if (id) ids.add(id);
+        return RezkaWatchedSite.readList(doc)?.watched || null;
+    }
+    function announce(message, error = false) {
+        let notice = document.getElementById('rc-watched-notice');
+        if (!notice) {
+            notice = document.createElement('div'); notice.id = 'rc-watched-notice';
+            notice.setAttribute('role', 'status'); notice.setAttribute('aria-live', 'polite');
+            document.body.append(notice);
         }
-        return ids;
+        notice.classList.toggle('rc-watched-error', error);
+        if (notice.textContent !== message) notice.textContent = message;
+        clearTimeout(noticeTimer);
+        noticeTimer = setTimeout(() => { notice.classList.remove('rc-watched-error'); notice.textContent = ''; }, 8000);
+    }
+    function invalidate() {
+        chrome.storage.local.set({ [REVISION]: Date.now() + ':' + Math.random() }).catch(() => {});
+    }
+    async function toggle(card) {
+        if (saving) return;
+        const href = card.querySelector('a[href]')?.getAttribute('href'), id = titleID(href);
+        if (!id) return;
+        const desired = !watched.has(id);
+        saving = id;
+        generation++; request?.abort(); request = undefined; refreshAgain = false;
+        apply();
+        announce('Сохраняем отметку…');
+        try {
+            watched = await RezkaWatchedSite.setWatched(href, desired);
+            // Keep any native history controls in this document in agreement.
+            for (const row of document.querySelectorAll('#videosaves-list ' + ROW)) {
+                if (titleID(row.querySelector('.title a[href]')?.getAttribute('href')) !== id) continue;
+                row.classList.toggle('watched-row', desired);
+                const view = row.querySelector('.view');
+                view?.classList.toggle('watched', desired);
+                if (view) view.title = view.getAttribute(desired ? 'data-text-unwatch' : 'data-text-watch') || '';
+                for (const info of row.querySelectorAll('.info-holder')) info.style.display = desired ? 'none' : '';
+            }
+            if (liveStates?.has(id)) liveStates.set(id, desired);
+            announce(desired ? 'Отмечено как просмотренное' : 'Отметка «Просмотрено» снята');
+            invalidate();
+        } catch {
+            announce('Не удалось сохранить отметку. Проверьте подключение и вход на сайт, затем нажмите галочку ещё раз.', true);
+        } finally {
+            saving = undefined;
+            apply();
+            // Reconcile uncertain responses and any remote change queued during the write.
+            void refresh(true, true);
+        }
+    }
+    function applyControls() {
+        const signedIn = !!document.querySelector('.b-tophead__contwatch');
+        for (const root of roots.keys()) {
+            for (const card of root.querySelectorAll(ACTION_CARD)) {
+                const id = titleID(card.querySelector('a[href]')?.getAttribute('href'));
+                let button = [...card.children].find(child => child.classList.contains('rc-watch-toggle'));
+                if (!signedIn || !id) {
+                    button?.remove(); card.classList.remove('rc-watched-card'); continue;
+                }
+                if (!button) {
+                    button = document.createElement('button'); button.type = 'button'; button.className = 'rc-watch-toggle';
+                    button.innerHTML = '<svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="m4 10 4 4 8-8"/></svg>';
+                    button.addEventListener('click', event => { event.preventDefault(); event.stopPropagation(); void toggle(card); });
+                    card.classList.add('rc-watched-card'); card.append(button);
+                }
+                const value = watched.has(id), busy = saving === id;
+                const label = busy ? 'Сохраняем отметку…' : value ? 'Просмотрено — снять отметку' : 'Отметить как просмотренное';
+                button.title = label + '\nСохраняется в «Досмотреть». У сериалов отметка также отключает уведомления о новых сериях.';
+                button.setAttribute('aria-label', label);
+                button.setAttribute('aria-pressed', String(value));
+                button.setAttribute('aria-busy', String(busy));
+                button.setAttribute('aria-disabled', String(!!saving));
+            }
+        }
     }
     function apply() {
         const next = new Set();
@@ -55,6 +114,7 @@ const RezkaWatched = (() => {
         for (const element of marked) if (!next.has(element)) element.classList.remove('rc-watched');
         for (const element of next) if (!element.classList.contains('rc-watched')) element.classList.add('rc-watched');
         marked = next;
+        applyControls();
     }
     function readLiveList() {
         if (location.pathname !== '/continue/') return;
@@ -79,10 +139,10 @@ const RezkaWatched = (() => {
         }
         liveStates = states;
         // Only invalidation is persisted, never the user's viewing history.
-        if (changed) chrome.storage.local.set({ [REVISION]: Date.now() + ':' + Math.random() }).catch(() => {});
+        if (changed) invalidate();
     }
     function schedule() {
-        if (!enabled || scanTimer) return;
+        if (!initialized || scanTimer) return;
         scanTimer = setTimeout(() => {
             scanTimer = undefined;
             readLiveList();
@@ -105,10 +165,11 @@ const RezkaWatched = (() => {
             })) schedule();
         });
         roots.set(root, observer);
-        if (enabled) { observe(root, observer); schedule(); }
+        if (initialized) { observe(root, observer); schedule(); }
     }
     async function refresh(force = false, remote = false) {
-        if (!enabled) return;
+        if (!initialized) return;
+        if (saving) { refreshAgain = true; return; }
         if (request) { if (force) refreshAgain = true; return; }
         if (!force && Date.now() - lastRefresh < 60000) return;
         if (!document.querySelector('.b-tophead__contwatch')) {
@@ -123,27 +184,8 @@ const RezkaWatched = (() => {
         request = controller;
         const timeout = setTimeout(() => controller.abort(), 15000);
         try {
-            const pending = [new URL('/continue/', location.origin).href], visited = new Set(), ids = new Set();
-            while (pending.length) {
-                const url = pending.shift();
-                if (visited.has(url)) continue;
-                if (visited.size >= 100) throw new Error('Watched list pagination limit');
-                visited.add(url);
-                const response = await fetch(url, { credentials: 'same-origin', cache: 'no-store',
-                    redirect: 'error', signal: controller.signal });
-                if (!response.ok) throw new Error('Watched list unavailable');
-                const doc = new DOMParser().parseFromString(await response.text(), 'text/html');
-                const pageIDs = readList(doc);
-                if (!pageIDs) throw new Error('Watched list missing');
-                for (const id of pageIDs) ids.add(id);
-                for (const link of doc.querySelectorAll('.b-navigation a[href]')) {
-                    const next = new URL(link.getAttribute('href'), url);
-                    if (next.origin !== location.origin || !/^\/continue\/(?:page\/\d+\/)?$/.test(next.pathname)) continue;
-                    next.hash = '';
-                    if (!visited.has(next.href)) pending.push(next.href);
-                }
-            }
-            if (enabled && generation === current) { watched = ids; apply(); }
+            const state = await RezkaWatchedSite.load(controller.signal);
+            if (generation === current) { watched = state.watched; apply(); }
         } catch {
             // Keep this tab's last confirmed state; a later focus retries the read.
         } finally {
@@ -162,10 +204,9 @@ const RezkaWatched = (() => {
         clearTimeout(scanTimer); scanTimer = undefined;
         for (const [root, observer] of roots) {
             observer.disconnect();
-            if (enabled) observe(root, observer);
+            observe(root, observer);
         }
-        if (enabled) { readLiveList(); apply(); void refresh(true); }
-        else { watched.clear(); liveStates = undefined; apply(); }
+        readLiveList(); apply(); void refresh(true);
     }
 
     const style = document.createElement('style');
@@ -185,7 +226,7 @@ const RezkaWatched = (() => {
     chrome.storage.local.get(SETTING).then(values => {
         if (preferenceRevision !== initialRevision) return;
         initialized = true; setEnabled(values[SETTING]);
-    }).catch(() => { if (!initialized) setEnabled(true); });
+    }).catch(() => { if (!initialized) { initialized = true; setEnabled(true); } });
     window.addEventListener('focus', () => void refresh());
     window.addEventListener('pageshow', () => void refresh());
     document.addEventListener('visibilitychange', () => {

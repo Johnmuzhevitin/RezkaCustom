@@ -9,3 +9,108 @@
     opacity: 1 !important;
     filter: none !important;
 }
+
+/* Fade content, keeping the small action available even on a watched card. */
+.rc-watched-card { position: relative; }
+.rc-watched-card.rc-watched {
+    opacity: 1 !important;
+    filter: none !important;
+}
+.rc-watched-card.rc-watched > :not(.rc-watch-toggle) {
+    opacity: .10 !important;
+    filter: grayscale(1) !important;
+}
+.rc-watched-card.rc-watched:hover > :not(.rc-watch-toggle),
+.rc-watched-card.rc-watched:focus-within > :not(.rc-watch-toggle) {
+    opacity: 1 !important;
+    filter: none !important;
+}
+.rc-watched-card > .rc-watch-toggle {
+    box-sizing: border-box;
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    z-index: 4;
+    display: grid;
+    place-items: center;
+    width: 26px;
+    height: 26px;
+    min-width: 26px;
+    min-height: 26px;
+    margin: 0;
+    padding: 0;
+    border: 1px solid rgb(255 255 255 / 65%);
+    border-radius: 5px;
+    background: #f3f5f7;
+    color: #53616a;
+    cursor: pointer;
+    opacity: .9;
+    transform: none;
+}
+.rc-watched-card > .rc-watch-toggle svg {
+    display: block;
+    width: 16px;
+    height: 16px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    pointer-events: none;
+}
+.rc-watched-card > .rc-watch-toggle[aria-pressed="true"] {
+    background: #315b86;
+    color: #fff;
+}
+.rc-watched-card > .rc-watch-toggle:hover {
+    opacity: 1;
+    background: #e4ebf1;
+    color: #244565;
+}
+.rc-watched-card > .rc-watch-toggle[aria-pressed="true"]:hover {
+    background: #244565;
+    color: #fff;
+}
+.rc-watched-card > .rc-watch-toggle:focus-visible {
+    opacity: 1;
+    outline: 2px solid #315b86;
+    outline-offset: 2px;
+}
+.rc-watched-card > .rc-watch-toggle[aria-disabled="true"] { cursor: wait; }
+.rc-watched-card > .rc-watch-toggle[aria-busy="true"] svg { visibility: hidden; }
+.rc-watch-toggle[aria-busy="true"]::after {
+    content: "";
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    border: 2px solid currentColor;
+    border-right-color: transparent;
+    border-radius: 50%;
+    animation: rc-watch-saving .8s linear infinite;
+}
+@keyframes rc-watch-saving { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+    .rc-watch-toggle[aria-busy="true"]::after { animation: none; }
+}
+#rc-watched-notice {
+    position: fixed;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+}
+#rc-watched-notice.rc-watched-error {
+    z-index: 10000;
+    right: 24px;
+    bottom: 24px;
+    width: 340px;
+    max-width: calc(100vw - 48px);
+    height: auto;
+    padding: 12px 16px;
+    border: 1px solid #9d2820;
+    border-radius: 6px;
+    background: #fff0ee;
+    color: #9d2820;
+    font: 14px/1.5 "Segoe UI", sans-serif;
+    clip-path: none;
+}
