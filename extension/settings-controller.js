@@ -69,6 +69,12 @@ const RezkaSettings = {
             for (const key of Object.keys(changes)) if (key.startsWith('r4:')) enqueue(key.slice(3));
         });
         chrome.runtime.onMessage.addListener((message, sender, respond) => {
+            if (message?.type === 'rezka:diagnostic-page') {
+                if (sender.id === chrome.runtime.id && !sender.tab) {
+                    respond({ connected: true, build: REZKA_BUILD, errorCount: errors.size, pendingReloadCount: pendingReload.size });
+                }
+                return;
+            }
             if (message?.type !== 'rezka:settings-state') return;
             (async () => {
                 await Promise.all(initialization.values());

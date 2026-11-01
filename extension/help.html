@@ -5,9 +5,23 @@
 <title>Rezka Custom</title>
 <link rel="stylesheet" href="help.css">
 <script src="build-info.js" defer></script>
+<script src="network-policy.js" defer></script>
 <script src="help.js" defer></script>
 <main>
   <p class="eyebrow" id="build-info">Rezka Custom</p>
+  <section class="diagnostics" aria-labelledby="diagnostics-title">
+    <h2 id="diagnostics-title">Диагностика</h2>
+    <p>Если что-то работает неправильно, соберите отчёт для нужной вкладки. Он покажет версии, состояние MyShows и прогресс, без аккаунта, названий сериалов, адресов страниц и токенов. Отчёт никуда не отправляется.</p>
+    <label for="diagnostics-tab">Вкладка Rezka</label>
+    <select id="diagnostics-tab"><option value="">Без выбранной вкладки</option></select>
+    <div class="diagnostics-actions">
+      <button type="button" class="button" id="diagnostics-collect">Собрать отчёт</button>
+      <button type="button" class="button secondary" id="diagnostics-copy" disabled>Скопировать диагностику</button>
+    </div>
+    <p id="diagnostics-status" role="status" aria-live="polite"></p>
+    <label for="diagnostics-report" id="diagnostics-report-label" hidden>Содержимое отчёта</label>
+    <textarea id="diagnostics-report" rows="16" readonly hidden spellcheck="false" aria-describedby="diagnostics-status"></textarea>
+  </section>
   <h1>Настройте просмотр<br>под себя.</h1>
   <p>Нажмите значок Rezka Custom на панели браузера. В боковой панели на всю доступную высоту окна доступны разделы «Вид», «Плеер», «Скрытие» и MyShows. Для подбора фильмов и сериалов используйте «Расширенный поиск» на сайте. Панель остаётся открытой при работе со страницей; её ширину можно изменить, потянув за край.</p>
   <ol>

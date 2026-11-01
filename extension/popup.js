@@ -36,6 +36,8 @@ const copy = {
 let data = {}, configs = [], section = 'view', targetTab = null, connected = false;
 let refreshId = 0, searchAnnouncement;
 let targetWindowId, tabQueryId = 0;
+// Same-extension help views can inspect this loaded panel without reading its journal.
+window.getRezkaPanelDiagnostics = () => ({ build: { ...REZKA_BUILD }, tabId: targetTab?.id, windowId: targetWindowId });
 const optimistic = new Map();
 
 function el(tag, className, text) {

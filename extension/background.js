@@ -109,3 +109,4 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
 });
 
 importScripts('myshows-core.js', 'myshows-worker.js');
+importScripts('diagnostics-worker.js');

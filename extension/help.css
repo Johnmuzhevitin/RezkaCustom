@@ -8,4 +8,16 @@ li { margin-bottom: 12px; padding-left: 5px; }
 .eyebrow { color: #6fc9b4; font-size: 13px; letter-spacing: .16em; }
 a { color: #87d9c6; }
 .button { display: inline-block; background: #87d9c6; color: #122720; padding: 10px 20px; border-radius: 7px; text-decoration: none; font-weight: 650; }
+button, select, textarea { font: inherit; }
+button { border: 1px solid transparent; cursor: pointer; }
+button:disabled { opacity: .5; cursor: default; }
+:is(button, select, textarea):focus-visible { outline: 2px solid #87d9c6; outline-offset: 3px; }
+.diagnostics { border-bottom: 1px solid #394145; padding-bottom: 28px; margin-bottom: 38px; }
+.diagnostics h2 { margin-top: 0; }
+.diagnostics label { display: block; margin-bottom: 8px; }
+.diagnostics select, .diagnostics textarea { box-sizing: border-box; width: 100%; background: #22282b; color: #e5e8e9; border: 1px solid #58656c; border-radius: 5px; padding: 10px; }
+.diagnostics textarea { font: 13px/1.5 ui-monospace, monospace; resize: vertical; }
+.diagnostics-actions { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 16px; }
+.button.secondary { background: transparent; color: #87d9c6; border-color: #58656c; }
+[hidden] { display: none !important; }
 footer { margin-top: 44px; border-top: 1px solid #394145; padding-top: 20px; font-size: 13px; color: #9aa6ac; }
