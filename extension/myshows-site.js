@@ -41,8 +41,11 @@
     function inspect(card, request) {
         if (request.kind !== undefined && !['movie', 'episode'].includes(request.kind)) throw new Error('match');
         if (request.kind === 'movie') {
+            // MyShows puts the movie entity beside __info, inside the same source-bound row.
+            const row = card.parentElement?.matches('.ScrobbleCard__row') ? card.parentElement : card;
+            if (row !== card && row.querySelectorAll('.ScrobbleCard__info').length !== 1) throw new Error('match');
             const ids = new Set();
-            for (const link of card.querySelectorAll('a[href]')) {
+            for (const link of row.querySelectorAll('a[href]')) {
                 const url = new URL(link.getAttribute('href'), location.origin);
                 if (url.origin !== location.origin) continue;
                 if (url.pathname.startsWith('/view/episode/')) throw new Error('match');
