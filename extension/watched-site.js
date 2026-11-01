@@ -1,6 +1,8 @@
 // Same-origin account operations matching the site's native history controls.
 // Fetched title scripts are parsed for numeric metadata only, never executed.
 const RezkaWatchedSite = (() => {
+    // A memory-only hint for parallel metadata reads, never authority for account writes.
+    let knownTitles;
     function titleID(href) {
         if (!href) return null;
         try {
@@ -57,6 +59,7 @@ const RezkaWatchedSite = (() => {
                 if (!visited.has(next.href)) pending.push(next.href);
             }
         }
+        knownTitles = new Set(result.entries.keys());
         return result;
     }
     async function post(path, fields) {
@@ -65,7 +68,7 @@ const RezkaWatchedSite = (() => {
             body: new URLSearchParams(fields).toString() }));
         if (result.success !== true) throw new Error('History update rejected');
     }
-    async function createEntry(href, id) {
+    async function readEntryFields(href, id) {
         // Use the current mirror even when the card links to another supported mirror.
         const path = new URL(href, location.origin).pathname;
         const doc = new DOMParser().parseFromString(await request(path), 'text/html');
@@ -83,31 +86,45 @@ const RezkaWatchedSite = (() => {
             break;
         }
         if (!fields) throw new Error('Player metadata missing');
+        return fields;
+    }
+    async function createEntry(href, id, prepared) {
+        const metadata = prepared ? await prepared : { fields: await readEntryFields(href, id) };
+        if (metadata.error) throw metadata.error;
         // Only new entries use send_save: never overwrite an existing playback position.
-        await post('/ajax/send_save/', fields);
+        await post('/ajax/send_save/', metadata.fields);
     }
     async function setWatched(href, desired) {
         const id = titleID(href);
         if (!id || typeof desired !== 'boolean') throw new Error('Invalid watched action');
         const update = async () => {
+            // Start only a read speculatively; the fresh history below still gates every write.
+            const prepared = desired && knownTitles && !knownTitles.has(id)
+                ? readEntryFields(href, id).then(fields => ({ fields }), error => ({ error })) : null;
             let state = await load();
             if (!state.entries.has(id) && desired) {
                 let error;
-                try { await createEntry(href, id); } catch (cause) { error = cause; }
+                try { await createEntry(href, id, prepared); } catch (cause) { error = cause; }
                 state = await load(); // Also reconcile an ambiguous/failed POST before retrying anything.
                 if (!state.entries.has(id)) throw error || new Error('Saved title missing');
             }
+            let needsConfirmation = false;
             for (const entry of state.entries.get(id) || []) {
                 if (entry.watched === desired) continue;
                 if (!entry.saveID) throw new Error('Save ID missing');
-                try { await post('/engine/ajax/cdn_saves_view.php', { id: entry.saveID }); }
+                try {
+                    await post('/engine/ajax/cdn_saves_view.php', { id: entry.saveID });
+                    needsConfirmation = true;
+                }
                 catch (error) {
                     const actual = await load();
                     const saved = actual.entries.get(id)?.find(item => item.saveID === entry.saveID);
                     if (saved?.watched !== desired) throw error;
+                    state = actual;
+                    needsConfirmation = false;
                 }
             }
-            const confirmed = await load();
+            const confirmed = needsConfirmation ? await load() : state;
             if (confirmed.watched.has(id) !== desired) throw new Error('Watched state not confirmed');
             return confirmed.watched;
         };

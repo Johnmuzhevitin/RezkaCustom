@@ -4,6 +4,7 @@ const RezkaWatched = (() => {
     if (window.top !== window || !RezkaNetwork.isSite(location.href)) return noop;
     const SETTING = 'r4:dim-watched';
     const REVISION = 'ui:watched-revision';
+    const revisionSource = crypto.randomUUID();
     const ROW = '.b-videosaves__list_item';
     const CARD = '.b-content__inline_item, .b-seriesupdate__block_list_item, .card';
     const ACTION_CARD = '.b-content__inline_item, article.card';
@@ -11,7 +12,7 @@ const RezkaWatched = (() => {
     let enabled = false, initialized = false, preferenceRevision = 0;
     let watched = new Set(), marked = new Set(), liveStates;
     let scanTimer, request, refreshAgain = false, generation = 0, lastRefresh = 0;
-    let saving, noticeTimer;
+    let saving, noticeTimer, revision = 0;
     let historyFilter = 'watching', historyUI;
     const { titleID } = RezkaWatchedSite;
     const isHistory = () => /^\/continue\/(?:page\/\d+\/)?$/.test(location.pathname);
@@ -32,7 +33,7 @@ const RezkaWatched = (() => {
         noticeTimer = setTimeout(() => { notice.classList.remove('rc-watched-error'); notice.textContent = ''; }, 8000);
     }
     function invalidate() {
-        chrome.storage.local.set({ [REVISION]: Date.now() + ':' + Math.random() }).catch(() => {});
+        chrome.storage.local.set({ [REVISION]: revisionSource + ':' + ++revision }).catch(() => {});
     }
     async function toggle(card) {
         if (saving) return;
@@ -43,8 +44,11 @@ const RezkaWatched = (() => {
         generation++; request?.abort(); request = undefined; refreshAgain = false;
         apply();
         announce('Сохраняем отметку…');
+        let confirmed = false;
         try {
             watched = await RezkaWatchedSite.setWatched(href, desired);
+            confirmed = true;
+            lastRefresh = Date.now();
             // Keep any native history controls in this document in agreement.
             for (const row of document.querySelectorAll('#videosaves-list ' + ROW)) {
                 if (titleID(row.querySelector('.title a[href]')?.getAttribute('href')) !== id) continue;
@@ -60,10 +64,13 @@ const RezkaWatched = (() => {
         } catch {
             announce('Не удалось сохранить отметку. Проверьте подключение и вход на сайт, затем нажмите галочку ещё раз.', true);
         } finally {
+            const reconcile = !confirmed || refreshAgain;
+            refreshAgain = false;
             saving = undefined;
             apply();
-            // Reconcile uncertain responses and any remote change queued during the write.
-            void refresh(true, true);
+            // The adapter already returned verified history. Only uncertainty or a
+            // foreign update received during the write requires another request.
+            if (reconcile) void refresh(true, true);
         }
     }
     function applyControls() {
@@ -275,7 +282,8 @@ const RezkaWatched = (() => {
             initialized = true;
             setEnabled(changes[SETTING].newValue);
         }
-        if (Object.hasOwn(changes, REVISION)) void refresh(true, true);
+        if (Object.hasOwn(changes, REVISION)
+            && !String(changes[REVISION].newValue || '').startsWith(revisionSource + ':')) void refresh(true, true);
     });
     const initialRevision = preferenceRevision;
     chrome.storage.local.get(SETTING).then(values => {
