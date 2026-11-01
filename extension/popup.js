@@ -261,7 +261,7 @@ function render() {
         content.setAttribute('aria-labelledby', 'tab-myshows');
         content.setAttribute('aria-busy', 'false');
         $('#search-status').textContent = '';
-        RezkaMyShowsPanel.mount(content, query);
+        RezkaMyShowsPanel.mount(content, query, () => targetTab);
         return;
     }
     // A search has its own heading; the selected tab continues to identify the return destination.

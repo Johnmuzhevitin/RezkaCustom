@@ -88,6 +88,12 @@
         if (next.account !== config.account || next.enabled !== config.enabled) { flush(); reset(); }
         config = next;
     }
+    // A manual mark may be requested before playback starts or while tracking is paused.
+    // Only the worker can read this snapshot; it rechecks the selected episode on submit.
+    chrome.runtime.onMessage.addListener((message, sender, respond) => {
+        if (message?.type !== 'myshows:player-current' || sender.id !== chrome.runtime.id || sender.tab) return;
+        respond({ episode: identity(), build: REZKA_BUILD.id });
+    });
     chrome.storage.local.get(M.key).then(values => configure(values[M.key])).catch(() => {});
     chrome.storage.onChanged.addListener((changes, area) => { if (area === 'local' && changes[M.key]) configure(changes[M.key].newValue); });
     // Episode changes can precede a new media source. Discard the boundary sample.

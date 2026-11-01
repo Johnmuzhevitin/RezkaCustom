@@ -16,9 +16,10 @@ const RezkaMyShowsPanel = (() => {
         const node = element('a', 'myshows-link', text); node.href = url; node.target = '_blank'; node.rel = 'noopener noreferrer'; return node;
     }
     const date = time => new Date(time).toLocaleString('ru', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
-    function mount(root, query = '') {
+    function mount(root, query = '', getTarget = () => null) {
         dispose();
         let state = null, closed = false, busy = false, filter = selectedFilter, limit = 50, signature = '';
+        let current = null, currentRequest = 0, currentTabId = null;
         root.append(element('h1', '', 'MyShows'), element('p', 'intro', 'Смотрите на Rezka — отметки появятся в MyShows автоматически.'));
         const connection = element('section', 'myshows-connection'); connection.setAttribute('aria-label', 'Подключение MyShows');
         const account = element('p', 'myshows-account', 'Проверяем подключение…');
@@ -40,6 +41,14 @@ const RezkaMyShowsPanel = (() => {
         for (const value of [80, 90, 95]) { const option = element('option', '', `${value}% серии`); option.value = value; threshold.append(option); }
         threshold.addEventListener('change', () => command('configure', { threshold: Number(threshold.value) }));
         thresholdLabel.append(thresholdText, threshold);
+        const currentSection = element('section', 'myshows-current'); currentSection.setAttribute('aria-label', 'Текущая серия');
+        currentSection.append(element('h2', 'myshows-journal-title', 'Текущая серия'));
+        const currentTitle = element('p', 'myshows-account');
+        const currentDescription = element('p', 'myshows-description', 'Откройте нужную серию на Rezka. Здесь можно засчитать её, не дожидаясь порога просмотра.');
+        const forceCurrent = button('Засчитать серию', () => {
+            if (current) command('force', { tabId: current.tabId, key: current.key, account: state.account });
+        }); forceCurrent.hidden = true;
+        currentSection.append(currentTitle, currentDescription, forceCurrent);
         const message = element('p', 'myshows-message'); message.setAttribute('role', 'status'); message.setAttribute('aria-live', 'polite'); message.hidden = true;
         const heading = element('h2', 'myshows-journal-title', 'Синхронизация');
         const summary = element('p', 'myshows-description');
@@ -51,7 +60,7 @@ const RezkaMyShowsPanel = (() => {
         const list = element('div', 'myshows-list');
         const more = button('Показать ещё', () => { limit += 50; signature = ''; renderList(); }, 'text-button'); more.hidden = true;
         const historyLink = link('Открыть историю в MyShows', M.historyUrl);
-        root.append(connection, enabledLabel, thresholdLabel, message, heading, summary, filters, list, more, historyLink);
+        root.append(connection, enabledLabel, thresholdLabel, currentSection, message, heading, summary, filters, list, more, historyLink);
         async function command(type, extra = {}) {
             if (busy) return;
             busy = true; controls();
@@ -59,6 +68,7 @@ const RezkaMyShowsPanel = (() => {
                 const reply = await chrome.runtime.sendMessage({ type: 'myshows:' + type, ...extra });
                 if (!reply?.ok) throw new Error(reply?.error || 'Не удалось выполнить действие. Повторите попытку.');
                 await refresh();
+                if (reply.notice && !closed) { message.hidden = false; message.textContent = reply.notice; }
             } catch (error) { message.hidden = false; message.textContent = error.message; }
             finally { busy = false; if (!closed) controls(); }
         }
@@ -71,7 +81,31 @@ const RezkaMyShowsPanel = (() => {
             disconnectButton.disabled = busy || connecting;
             connectButton.hidden = connected;
             disconnectButton.hidden = !connected;
-            for (const action of list.querySelectorAll('button')) action.disabled = busy;
+            const currentEntry = current && state?.entries.find(entry => entry.account === state.account && entry.key === current.key);
+            forceCurrent.disabled = busy || !connected || !current || !M.canForce(currentEntry);
+            forceCurrent.textContent = currentEntry?.status === 'done' ? 'Уже отмечено' : currentEntry && !M.canForce(currentEntry)
+                ? (currentEntry.status === 'attention' ? 'Нужна проверка в списке' : 'Уже в синхронизации') : 'Засчитать серию';
+            for (const action of list.querySelectorAll('button')) action.disabled = busy || (action.dataset.requiresConnection === 'true' && !connected);
+        }
+        async function refreshCurrent() {
+            const request = ++currentRequest;
+            const tabId = getTarget()?.id;
+            if (currentTabId !== tabId) { current = null; currentTabId = tabId; showCurrent(); }
+            if (!Number.isInteger(tabId)) return;
+            try {
+                const reply = await chrome.runtime.sendMessage({ type: 'myshows:current', tabId });
+                if (closed || request !== currentRequest || getTarget()?.id !== tabId) return;
+                current = reply?.ok ? reply.current : null;
+            } catch { if (!closed && request === currentRequest) current = null; }
+            if (!closed && request === currentRequest) showCurrent();
+        }
+        function showCurrent() {
+            currentTitle.textContent = current ? `${current.episode.title} · ${M.label(current.episode)}` : '';
+            currentTitle.hidden = !current;
+            currentDescription.textContent = current ? 'Засчитать эту серию сейчас, даже если порог просмотра не достигнут. Работает и при выключенных автоотметках.'
+                : 'Откройте нужную серию на Rezka. Если она уже открыта, обновите страницу после обновления расширения.';
+            forceCurrent.hidden = !current;
+            controls();
         }
         function renderList() {
             if (!state || closed) return;
@@ -84,7 +118,7 @@ const RezkaMyShowsPanel = (() => {
             let items = (filter === 'queue' ? queue : filter === 'attention' ? attention : entries.filter(entry => M.terminal.has(entry.status)))
                 .filter(entry => `${entry.episode.title} ${entry.episode.originalTitle} ${M.label(entry.episode)}`.toLocaleLowerCase('ru').includes(query))
                 .sort((a, b) => b.updatedAt - a.updatedAt);
-            const nextSignature = JSON.stringify(items.slice(0, limit).map(e => [e.id, e.status, e.reason, Math.floor(e.progress), e.events, e.nextAt]));
+            const nextSignature = JSON.stringify(items.slice(0, limit).map(e => [e.id, e.status, e.reason, Math.floor(e.progress), e.events, e.nextAt, e.manualAt, e.manualPending]));
             if (signature === nextSignature) return;
             signature = nextSignature;
             const focused = document.activeElement?.dataset.myshowsAction;
@@ -103,8 +137,13 @@ const RezkaMyShowsPanel = (() => {
                 meta.append(element('span', 'myshows-episode', M.label(entry.episode)), element('span', 'myshows-state', labels[entry.status] || 'Нужно внимание'));
                 meta.lastChild.dataset.status = entry.status; row.append(meta);
                 if (entry.status === 'watching') row.append(element('p', 'myshows-description', `Просмотрено ${Math.floor(entry.progress)}% · Отметим после ${state.threshold}%`));
+                if (entry.manualAt) row.append(element('p', 'myshows-description', 'По кнопке «Засчитать серию»'));
                 if (entry.reason) row.append(element('p', 'myshows-description', entry.reason));
                 const actions = element('div', 'myshows-actions');
+                if (M.canForce(entry)) {
+                    const force = button('Засчитать серию', () => command('force', { id: entry.id, account: state.account }), 'text-button');
+                    force.dataset.myshowsAction = entry.id + '-force'; force.dataset.requiresConnection = 'true'; actions.append(force);
+                }
                 if (entry.status === 'attention') {
                     const retry = button(entry.submittedAt ? 'Проверить' : 'Повторить', () => command('retry', { id: entry.id }), 'text-button');
                     retry.dataset.myshowsAction = entry.id + '-retry'; actions.append(retry);
@@ -119,7 +158,7 @@ const RezkaMyShowsPanel = (() => {
                 const details = element('details', 'myshows-events'); details.dataset.id = entry.id; details.open = expanded.has(entry.id);
                 details.append(element('summary', '', 'История · ' + date(entry.updatedAt || entry.createdAt)));
                 const events = element('ol');
-                events.append(element('li', '', date(entry.createdAt) + ' · Начат просмотр'));
+                events.append(element('li', '', date(entry.createdAt) + (entry.origin === 'manual' ? ' · Добавлена вручную' : ' · Начат просмотр')));
                 for (const event of entry.events || []) events.append(element('li', '', `${date(event.at)} · ${labels[event.status] || event.status}${event.reason ? '. ' + event.reason : ''}`));
                 details.append(events); row.append(details); list.append(row);
             }
@@ -132,7 +171,7 @@ const RezkaMyShowsPanel = (() => {
             state = value || M.initial();
             const connected = state.connection === 'connected';
             account.textContent = connected ? `Подключён ${state.account}` : state.connection === 'connecting' ? 'Подключаем MyShows…' : 'MyShows не подключён';
-            description.textContent = connected ? (state.enabled ? 'Отметки и очередь обрабатываются автоматически.' : 'Синхронизация на паузе. Очередь сохранена.')
+            description.textContent = connected ? (state.enabled ? 'Отметки и очередь обрабатываются автоматически.' : 'Автоотметки на паузе. Можно засчитать отдельную серию вручную.')
                 : 'Откроем MyShows и подключим существующий API-токен. Нужны вход в аккаунт в этом Chrome и доступ к скробблингу (MyShows PRO).';
             enabled.checked = state.enabled; threshold.value = state.threshold;
             message.textContent = state.message || ''; message.hidden = !state.message;
@@ -146,7 +185,9 @@ const RezkaMyShowsPanel = (() => {
         const listener = (changes, area) => { if (area === 'local' && changes[M.key]) update(changes[M.key].newValue); };
         chrome.storage.onChanged.addListener(listener);
         refresh().catch(error => { if (!closed) { account.textContent = 'Не удалось загрузить MyShows'; message.textContent = error.message; message.hidden = false; } });
-        dispose = () => { closed = true; chrome.storage.onChanged.removeListener(listener); };
+        refreshCurrent();
+        const currentTimer = setInterval(refreshCurrent, 2000);
+        dispose = () => { closed = true; ++currentRequest; clearInterval(currentTimer); chrome.storage.onChanged.removeListener(listener); };
         return dispose;
     }
     return { mount, unmount: () => dispose() };

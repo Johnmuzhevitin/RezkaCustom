@@ -8,6 +8,8 @@
 .myshows-connection .myshows-button:hover { background:var(--accent-hover); }
 .myshows-message { padding:10px 12px; border-radius:var(--radius-control); background:var(--notice-surface); color:var(--notice-ink); overflow-wrap:anywhere; }
 .myshows-journal-title { font-size:var(--text-title); margin:22px 0 5px; font-weight:600; }
+.myshows-current { padding-bottom:18px; border-bottom:1px solid var(--line); }
+.myshows-current .myshows-account { font-size:var(--text-small); }
 .myshows-filters { display:flex; gap:5px; margin:12px 0 3px; }
 .myshows-filters button { flex:1; min-width:0; padding:8px 5px; font-size:var(--text-small); }
 .myshows-filters [aria-pressed="true"] { background:var(--accent); border-color:var(--accent); color:var(--surface); }

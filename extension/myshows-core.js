@@ -42,10 +42,13 @@ const RezkaMyShows = (() => {
     }
     function episodeKey(ep) { return `${ep.rezkaId}:${ep.season}:${ep.number}`; }
     function label(ep) { return `S${String(ep.season).padStart(2, '0')}E${String(ep.number).padStart(2, '0')}`; }
+    function canForce(entry) {
+        return !entry || (!entry.submittedAt && !entry.manualPending && ['watching', 'queued', 'attention', 'cancelled'].includes(entry.status));
+    }
     function payload(entry, version) {
         const show = { title: entry.episode.originalTitle || entry.episode.title, ids: { imdb: entry.episode.imdb } };
         if (entry.episode.year) show.year = entry.episode.year;
-        return { progress: Math.min(100, Math.ceil(entry.progress * 10) / 10), source_app: entry.source,
+        return { progress: entry.manualAt ? 100 : Math.min(100, Math.ceil(entry.progress * 10) / 10), source_app: entry.source,
             app_version: version, show, episode: { season: entry.episode.season, number: entry.episode.number } };
     }
     function transition(entry, status, reason = '', now = Date.now()) {
@@ -55,5 +58,5 @@ const RezkaMyShows = (() => {
         entry.status = status; entry.reason = reason; entry.updatedAt = now;
         return entry;
     }
-    return { key, historyUrl, terminal, active, initial, mergeRanges, percent, interval, validEpisode, episodeKey, label, payload, transition };
+    return { key, historyUrl, terminal, active, initial, mergeRanges, percent, interval, validEpisode, episodeKey, label, canForce, payload, transition };
 })();

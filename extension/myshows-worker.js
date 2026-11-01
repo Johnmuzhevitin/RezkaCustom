@@ -130,7 +130,8 @@
     async function live(entry) {
         const state = await read();
         const current = state.entries.find(e => e.id === entry.id);
-        if (!state.enabled || state.connection !== 'connected' || state.account !== entry.account || !current || M.terminal.has(current.status)) throw fail('paused');
+        if (state.connection !== 'connected' || state.account !== entry.account || !current || M.terminal.has(current.status)
+            || (!state.enabled && !current.manualPending)) throw fail('paused');
         return current;
     }
     async function changeEntry(id, change) { return edit(state => { const entry = state.entries.find(e => e.id === id); if (entry) return change(entry, state); }); }
@@ -144,7 +145,7 @@
             if (who.account !== entry.account) throw fail('account');
             if (!entry.submittedAt) {
                 if (!entry.episode.imdb) throw fail('identity');
-                await live(entry);
+                entry = await live(entry);
                 // Persist intent BEFORE the network call. A crash can only trigger a read, never a duplicate POST.
                 await changeEntry(entry.id, current => { current.submittedAt = Date.now(); M.transition(current, 'sending'); });
                 let response;
@@ -185,7 +186,7 @@
             await chrome.tabs.update(tabId, { url: `https://myshows.me/view/episode/${result.episodeId}/` });
             const verified = await site(tabId, { type: 'myshows:site-verify', account: entry.account, episodeId: result.episodeId });
             if (!verified.watched) throw fail('unwatched');
-            await changeEntry(entry.id, current => { if (!M.terminal.has(current.status)) { M.transition(current, 'done'); current.completedAt = Date.now(); current.nextAt = 0; current.ranges = []; } });
+            await changeEntry(entry.id, current => { if (!M.terminal.has(current.status)) { M.transition(current, 'done'); current.manualPending = false; current.completedAt = Date.now(); current.nextAt = 0; current.ranges = []; } });
         } catch (error) {
             await changeEntry(entry.id, (current, state) => {
                 if (M.terminal.has(current.status)) return;
@@ -193,9 +194,13 @@
                 if (code === 'paused') { M.transition(current, current.submittedAt ? 'checking' : 'queued'); return; }
                 current.attempts = (current.attempts || 0) + 1;
                 current.code = code;
-                if (code === 'account' || code === 'login') { state.enabled = false; state.message = errors[code]; }
+                if (code === 'account' || code === 'login') {
+                    state.enabled = false; state.message = errors[code];
+                    for (const item of state.entries) item.manualPending = false;
+                }
                 const retryable = ['page', 'network', 'pending', 'unwatched', 'missing'].includes(code);
                 const nextStatus = retryable && current.attempts < 5 ? (current.submittedAt ? 'checking' : 'queued') : 'attention';
+                if (nextStatus === 'attention') current.manualPending = false;
                 current.nextAt = Date.now() + Math.min(3600000, 60000 * 2 ** (current.attempts - 1));
                 M.transition(current, nextStatus, errors[code] || errors.network);
             });
@@ -207,12 +212,13 @@
         try {
             for (let i = 0; i < 8; i++) {
                 const state = await read();
-                if (!state.enabled || state.connection !== 'connected') break;
+                if (state.connection !== 'connected') break;
                 const credential = await secret();
                 if (!credential || credential.account !== state.account) {
                     await edit(state => { state.enabled = false; state.connection = 'error'; state.message = errors.auth; }); break;
                 }
-                const entry = state.entries.find(e => e.account === state.account && M.active.has(e.status) && (e.nextAt || 0) <= Date.now());
+                const entry = state.entries.find(e => e.account === state.account && (state.enabled || e.manualPending)
+                    && M.active.has(e.status) && (e.nextAt || 0) <= Date.now());
                 if (!entry) break;
                 await perform(entry, credential);
             }
@@ -252,6 +258,8 @@
     }
     async function panel(message) {
         if (message.type === 'myshows:state') return { state: await read() };
+        if (message.type === 'myshows:current') return { current: await currentEpisode(message.tabId) };
+        if (message.type === 'myshows:force') return force(message);
         if (message.type === 'myshows:connect') {
             if (running || connecting) return { error: 'Дождитесь завершения текущей проверки.' };
             connect().catch(() => {}); return {};
@@ -263,7 +271,11 @@
         }
         if (message.type === 'myshows:configure') {
             await edit(state => {
-                if (typeof message.enabled === 'boolean') { state.enabled = message.enabled && state.connection === 'connected'; if (state.enabled) state.message = ''; }
+                if (typeof message.enabled === 'boolean') {
+                    state.enabled = message.enabled && state.connection === 'connected';
+                    if (state.enabled) state.message = '';
+                    else for (const entry of state.entries) entry.manualPending = false;
+                }
                 if ([80, 90, 95].includes(message.threshold)) state.threshold = message.threshold;
                 for (const entry of state.entries) {
                     if (entry.account === state.account && entry.status === 'watching' && entry.progress >= state.threshold) {
@@ -275,13 +287,50 @@
         if (message.type === 'myshows:retry' || message.type === 'myshows:cancel') {
             await changeEntry(message.id, (entry, state) => {
                 if (entry.account !== state.account || !['watching', 'queued', 'attention'].includes(entry.status)) return;
-                if (message.type === 'myshows:cancel') { M.transition(entry, 'cancelled', entry.submittedAt ? errors.paused : 'Автоматическая отметка для этой серии отключена.'); return; }
+                if (message.type === 'myshows:cancel') { entry.manualPending = false; M.transition(entry, 'cancelled', entry.submittedAt ? errors.paused : 'Автоматическая отметка для этой серии отключена.'); return; }
                 if (entry.status !== 'attention') return;
                 entry.attempts = 0; entry.nextAt = 0;
+                if (entry.manualAt) entry.manualPending = true;
                 M.transition(entry, entry.submittedAt ? 'checking' : 'queued');
             }); kick(); return {};
         }
         throw fail('input');
+    }
+    async function currentEpisode(tabId) {
+        if (!Number.isInteger(tabId)) return null;
+        try {
+            const tab = await chrome.tabs.get(tabId);
+            if (!tab.active || !RezkaNetwork.isSite(tab.url)) return null;
+            const reply = await chrome.tabs.sendMessage(tabId, { type: 'myshows:player-current' }, { frameId: 0 });
+            if (reply?.build !== REZKA_BUILD.id) return null;
+            const episode = M.validEpisode(reply.episode);
+            const url = new URL(tab.url);
+            if (!episode || episode.rezkaId !== Number(url.pathname.match(/\/(\d+)-[^/]+\.html$/)?.[1])) return null;
+            return { tabId, episode, key: M.episodeKey(episode), url: url.origin + url.pathname };
+        } catch { return null; }
+    }
+    async function force(message) {
+        // Never trust panel-supplied episode metadata: obtain it from the actual top frame.
+        const current = message.id ? null : await currentEpisode(message.tabId);
+        if (!message.id && (!current || current.key !== message.key)) return { error: 'На странице выбрана другая серия или вкладка недоступна. Проверьте текущую серию и нажмите ещё раз.' };
+        const result = await edit(state => {
+            if (state.connection !== 'connected') return { error: 'Сначала подключите MyShows.' };
+            if (!message.account || message.account !== state.account) return { error: 'Аккаунт изменился. Откройте раздел MyShows заново.' };
+            let entry = state.entries.find(e => e.account === state.account && (message.id ? e.id === message.id : e.key === current.key));
+            if (message.id && !entry) return { error: 'Запись недоступна в подключённом аккаунте.' };
+            if (!M.canForce(entry)) return { notice: entry.status === 'done' ? 'Серия уже отмечена в MyShows.' : 'Серия уже отправлена на синхронизацию. Следите за её статусом в списке.' };
+            if (!entry) {
+                const id = crypto.randomUUID();
+                entry = { id, source: 'Rezka Custom · ' + id, key: current.key, account: state.account, episode: current.episode, url: current.url,
+                    createdAt: Date.now(), duration: 0, ranges: [], progress: 0, status: 'watching', events: [], origin: 'manual' };
+                state.entries.push(entry);
+            } else if (current) entry.episode = current.episode;
+            entry.manualAt = Date.now(); entry.manualPending = true; entry.threshold = 100;
+            entry.attempts = 0; entry.nextAt = 0; delete entry.code;
+            M.transition(entry, 'queued', 'Запрошена ручная отметка без ожидания порога просмотра.');
+            return { notice: 'Серия добавлена в очередь вручную. Проверяем отметку в MyShows.' };
+        });
+        kick(); return result;
     }
     chrome.runtime.onMessage.addListener((message, sender, respond) => {
         if (!message?.type?.startsWith('myshows:') || message.type.startsWith('myshows:site-')) return;
