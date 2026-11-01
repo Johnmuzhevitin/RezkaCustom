@@ -1,6 +1,6 @@
 /* Read-only, allowlisted diagnostics. Credentials are never opened by this module. */
 const RezkaDiagnostics = (() => {
-    const statuses = ['watching', 'queued', 'sending', 'confirming', 'checking', 'attention', 'done', 'cancelled'];
+    const statuses = ['watching', 'queued', 'sending', 'confirming', 'checking', 'attention', 'done', 'cancelled', 'reset'];
     const codes = new Set(['login', 'account', 'token', 'auth', 'identity', 'match', 'manual', 'missing', 'duplicate',
         'progress', 'layout', 'page', 'pending', 'unwatched', 'network', 'rejected', 'validation', 'source', 'paused', 'legacy_rejected']);
     const choice = (value, allowed, fallback = 'unknown') => allowed.includes(value) ? value : fallback;

@@ -323,6 +323,24 @@
         if (message.type === 'myshows:state') return { state: await read() };
         if (message.type === 'myshows:current') return { current: await currentMedia(message.tabId) };
         if (message.type === 'myshows:force') return force(message);
+        if (message.type === 'myshows:reset') {
+            return edit(state => {
+                const index = state.entries.findIndex(entry => entry.id === message.id && entry.account === state.account);
+                if (!message.account || message.account !== state.account || index < 0) return { error: 'Запись недоступна в подключённом аккаунте.' };
+                const entry = state.entries[index];
+                if (!M.canReset(entry)) return { error: 'Сброс доступен только для завершённых записей. Сначала проверьте результат отправки в MyShows.' };
+                if (activeJob?.id === entry.id) return { error: 'Дождитесь завершения текущей проверки и повторите сброс.' };
+                // A fresh identity separates the next explicit mark from the old submission.
+                // Keep a terminal record so late player batches and alarms cannot re-mark it.
+                const id = crypto.randomUUID();
+                const replacement = { id, source: M.sourceFor(id), key: entry.key, account: entry.account, episode: entry.episode,
+                    url: entry.url, createdAt: entry.createdAt, origin: entry.origin, events: entry.events || [],
+                    duration: 0, ranges: [], progress: 0, watchedProgress: 0, confirmedPosition: 0, status: 'reset' };
+                M.transition(replacement, 'reset', 'Локальная отметка и прогресс сброшены. Состояние в MyShows не изменялось.');
+                state.entries[index] = replacement;
+                return { notice: 'Запись сброшена в расширении. Теперь можно снова засчитать просмотр вручную.' };
+            });
+        }
         if (message.type === 'myshows:connect') {
             if (running || connecting) return { error: 'Дождитесь завершения текущей проверки.' };
             connect().catch(() => {}); return {};

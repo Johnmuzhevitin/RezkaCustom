@@ -3,7 +3,7 @@ const RezkaMyShows = (() => {
     const key = 'myshows:state';
     const historyUrl = 'https://myshows.me/profile/watch-history/';
     const positionDelay = 30;
-    const terminal = new Set(['done', 'cancelled']);
+    const terminal = new Set(['done', 'cancelled', 'reset']);
     const active = new Set(['queued', 'sending', 'confirming', 'checking']);
     function initial() {
         return { version: 1, enabled: false, threshold: 90, account: '', connection: 'disconnected', message: '', entries: [] };
@@ -74,10 +74,11 @@ const RezkaMyShows = (() => {
     }
     function label(ep) { return isMovie(ep) ? 'Фильм' : `S${String(ep.season).padStart(2, '0')}E${String(ep.number).padStart(2, '0')}`; }
     function canForce(entry) {
-        return !entry || (!entry.submittedAt && !entry.manualPending && ['watching', 'queued', 'attention', 'cancelled'].includes(entry.status));
+        return !entry || (!entry.submittedAt && !entry.manualPending && ['watching', 'queued', 'attention', 'cancelled', 'reset'].includes(entry.status));
     }
     function canCancel(entry) { return !!entry && ['watching', 'queued', 'sending', 'confirming', 'checking', 'attention'].includes(entry.status); }
     function canResume(entry) { return entry?.status === 'cancelled' && !entry.submittedAt; }
+    function canReset(entry) { return entry?.status === 'done'; }
     function payload(entry, version) {
         const show = { title: entry.episode.originalTitle || entry.episode.title, ids: { imdb: entry.episode.imdb } };
         if (entry.episode.year) show.year = entry.episode.year;
@@ -92,5 +93,5 @@ const RezkaMyShows = (() => {
         entry.status = status; entry.reason = reason; entry.updatedAt = now;
         return entry;
     }
-    return { key, historyUrl, positionDelay, terminal, active, initial, mergeRanges, percent, interval, advancePosition, isMovie, validMedia, mediaKey, remoteId, watchUrl, sourceFor, label, canForce, canCancel, canResume, payload, transition };
+    return { key, historyUrl, positionDelay, terminal, active, initial, mergeRanges, percent, interval, advancePosition, isMovie, validMedia, mediaKey, remoteId, watchUrl, sourceFor, label, canForce, canCancel, canResume, canReset, payload, transition };
 })();

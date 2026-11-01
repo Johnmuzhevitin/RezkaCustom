@@ -56,7 +56,7 @@
 .myshows-state { color:var(--notice-ink); font-weight:600; overflow-wrap:anywhere; }
 .myshows-state[data-status="done"] { color:var(--success); }
 .myshows-state[data-status="attention"] { color:var(--error-ink); }
-.myshows-state[data-status="cancelled"] { color:var(--muted); }
+.myshows-state[data-status="cancelled"], .myshows-state[data-status="reset"] { color:var(--muted); }
 .myshows-entry .myshows-description { margin:4px 0; }
 .myshows-entry .myshows-actions { margin-top:6px; column-gap:16px; }
 .myshows-entry .text-button { min-height:36px; padding:6px 0; font-size:var(--text-small); }

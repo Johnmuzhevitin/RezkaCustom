@@ -1,7 +1,8 @@
 const RezkaMyShowsPanel = (() => {
     const M = RezkaMyShows;
     const labels = { watching: 'Смотрю', queued: 'В очереди', sending: 'Отправляем', confirming: 'Подтверждаем', checking: 'Проверяем',
-        attention: 'Нужно внимание', done: 'Отмечено в MyShows', cancelled: 'Отменено' };
+        attention: 'Нужно внимание', done: 'Отмечено в MyShows', cancelled: 'Отменено', reset: 'Сброшено в расширении' };
+    const resetHint = 'Сбросить локальную отметку и прогресс. Состояние в MyShows не изменится. Повторное засчитывание — вручную.';
     const cancelledDescription = entry => entry.submittedAt
         ? 'Запрос уже отправлен. Проверьте результат в MyShows: остановка синхронизации не снимает отметку на сайте.'
         : `Отправка отменена. Можно продолжить отслеживание или засчитать ${M.isMovie(entry.episode) ? 'фильм' : 'серию'} вручную.`;
@@ -72,8 +73,10 @@ const RezkaMyShowsPanel = (() => {
         resumeCurrent.dataset.myshowsCurrent = 'resume';
         const cancelCurrent = button('Отменить отправку', () => withCurrent('cancel'), 'text-button');
         cancelCurrent.dataset.myshowsCurrent = 'cancel';
+        const resetCurrent = button('Сбросить запись', () => withCurrent('reset'), 'text-button');
+        resetCurrent.dataset.myshowsCurrent = 'reset'; resetCurrent.title = resetHint;
         const currentLink = link('Проверить в MyShows', M.historyUrl);
-        const currentActions = element('div', 'myshows-actions'); currentActions.append(forceCurrent, retryCurrent, resumeCurrent, cancelCurrent, currentLink);
+        const currentActions = element('div', 'myshows-actions'); currentActions.append(forceCurrent, retryCurrent, resumeCurrent, cancelCurrent, resetCurrent, currentLink);
         currentBody.append(currentTitle, currentProgress, progressTrack, confirmation, currentDescription, currentActions);
         currentSection.append(currentHeading, currentBody);
         const message = element('p', 'myshows-message'); message.setAttribute('role', 'status'); message.hidden = true;
@@ -125,6 +128,7 @@ const RezkaMyShowsPanel = (() => {
             return labels[entry?.status] || '';
         }
         function explanation(entry) {
+            if (entry?.status === 'reset') return `Локальная отметка и прогресс сброшены. В MyShows ничего не изменилось. Нажмите «Засчитать ${M.isMovie(entry.episode) ? 'фильм' : 'серию'}», чтобы отметить просмотр заново.`;
             if (entry?.status === 'cancelled') return cancelledDescription(entry);
             if (entry?.reason) return entry.reason;
             if (entry?.status === 'done') return entry.manualAt ? 'Просмотр засчитан вручную. Отметка проверена на сайте.' : 'Отметка проверена на сайте.';
@@ -181,6 +185,7 @@ const RezkaMyShowsPanel = (() => {
             retryCurrent.hidden = entry?.status !== 'attention'; retryCurrent.disabled = busy || !connected();
             text(retryCurrent, entry?.submittedAt ? 'Проверить' : 'Повторить');
             cancelCurrent.hidden = !M.canCancel(entry); cancelCurrent.disabled = busy;
+            resetCurrent.hidden = !M.canReset(entry); resetCurrent.disabled = busy;
             text(cancelCurrent, entry?.submittedAt ? 'Остановить синхронизацию' : 'Отменить отправку');
             resumeCurrent.hidden = !M.canResume(entry); resumeCurrent.disabled = busy || !connected();
             currentLink.hidden = !M.remoteId(entry) && !entry?.submittedAt; currentLink.href = M.watchUrl(entry);
@@ -226,7 +231,7 @@ const RezkaMyShowsPanel = (() => {
             const progress = element('p', 'myshows-description'), position = element('p', 'myshows-description'), manual = element('p', 'myshows-description'), reason = element('p', 'myshows-description');
             const actions = element('div', 'myshows-actions');
             const view = { row, title, episode, status, progress, position, manual, reason, entry, actions, buttons: {} };
-            for (const [type, name] of [['resume', 'Продолжить отслеживание'], ['force', 'Засчитать серию'], ['retry', 'Проверить'], ['cancel', 'Отменить отправку']]) {
+            for (const [type, name] of [['resume', 'Продолжить отслеживание'], ['force', 'Засчитать серию'], ['retry', 'Проверить'], ['cancel', 'Отменить отправку'], ['reset', 'Сбросить запись']]) {
                 const node = button(name, () => command(type, { id: view.entry.id, account: state.account }), 'text-button');
                 node.dataset.myshowsAction = entry.id + '-' + type; view.buttons[type] = node; actions.append(node);
             }
@@ -242,9 +247,10 @@ const RezkaMyShowsPanel = (() => {
             text(buttons.force, M.isMovie(entry.episode) ? 'Засчитать фильм' : 'Засчитать серию');
             buttons.resume.hidden = !M.canResume(entry); buttons.force.hidden = !M.canForce(entry);
             buttons.retry.hidden = entry.status !== 'attention'; buttons.cancel.hidden = !M.canCancel(entry);
+            buttons.reset.hidden = !M.canReset(entry);
             text(buttons.retry, entry.submittedAt ? 'Проверить' : 'Повторить');
             text(buttons.cancel, entry.submittedAt ? 'Остановить синхронизацию' : 'Отменить отправку');
-            for (const [type, node] of Object.entries(buttons)) node.disabled = busy || (type !== 'cancel' && !connected());
+            for (const [type, node] of Object.entries(buttons)) node.disabled = busy || (!['cancel', 'reset'].includes(type) && !connected());
             view.link.hidden = !M.remoteId(entry) && !entry.submittedAt; view.link.href = M.watchUrl(entry);
             text(view.link, M.remoteId(entry) ? mediaLinkText(entry) : 'Проверить в MyShows');
         }
@@ -316,7 +322,7 @@ const RezkaMyShowsPanel = (() => {
             const statuses = new Map(next.entries.filter(entry => entry.account === next.account).map(entry => [entry.id, entry.status]));
             if (knownStatuses && state?.account === next.account) {
                 const changed = next.entries.filter(entry => entry.account === next.account && knownStatuses.get(entry.id) !== entry.status
-                    && ['done', 'attention', 'cancelled'].includes(entry.status));
+                    && ['done', 'attention', 'cancelled', 'reset'].includes(entry.status));
                 if (changed.length) text(announcement, changed.map(entry => `${entry.episode.title}, ${M.label(entry.episode)}: ${labels[entry.status]}.`).join(' '));
             }
             knownStatuses = statuses; state = next;
