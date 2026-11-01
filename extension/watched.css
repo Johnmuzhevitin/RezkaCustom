@@ -44,8 +44,14 @@
     background: #f3f5f7;
     color: #53616a;
     cursor: pointer;
-    opacity: .9;
+    opacity: 0;
+    pointer-events: none;
     transform: none;
+}
+.rc-watched-card:hover > .rc-watch-toggle,
+.rc-watched-card:focus-within > .rc-watch-toggle {
+    opacity: .9;
+    pointer-events: auto;
 }
 .rc-watched-card > .rc-watch-toggle svg {
     display: block;
