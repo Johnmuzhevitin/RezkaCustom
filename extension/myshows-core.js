@@ -2,6 +2,7 @@
 const RezkaMyShows = (() => {
     const key = 'myshows:state';
     const historyUrl = 'https://myshows.me/profile/watch-history/';
+    const positionDelay = 30;
     const terminal = new Set(['done', 'cancelled']);
     const active = new Set(['queued', 'sending', 'confirming', 'checking']);
     function initial() {
@@ -29,6 +30,20 @@ const RezkaMyShows = (() => {
         const delta = current.time - previous.time;
         if (seconds <= 0 || seconds > 15 || delta <= 0 || delta > seconds * Math.max(previous.rate, current.rate) + .35) return null;
         return [previous.time, current.time];
+    }
+    function advancePosition(seconds, previous, current) {
+        const reset = { seconds: 0, position: 0 };
+        if (!previous || previous.key !== current.key || previous.source !== current.source || current.seeking) return reset;
+        const elapsed = (current.wall - previous.wall) / 1000;
+        const delta = current.time - previous.time;
+        const rate = Math.max(previous.rate, current.rate);
+        if (![elapsed, delta, rate].every(Number.isFinite) || rate <= 0 || elapsed < 0 || elapsed > 15
+            || delta < 0 || delta > elapsed * rate + .35) return reset;
+        // A pause or stalled frame cannot confirm a seek. Keep the earned playback
+        // seconds, but never count idle wall time or make faster playback shorten the wait.
+        if (!interval(previous, current)) return { seconds, position: 0 };
+        seconds = Math.min(positionDelay, seconds + Math.min(elapsed, delta / rate));
+        return { seconds, position: seconds >= positionDelay ? current.time : 0 };
     }
     function validEpisode(input) {
         if (!input || !Number.isSafeInteger(input.rezkaId) || input.rezkaId <= 0
@@ -66,5 +81,5 @@ const RezkaMyShows = (() => {
         entry.status = status; entry.reason = reason; entry.updatedAt = now;
         return entry;
     }
-    return { key, historyUrl, terminal, active, initial, mergeRanges, percent, interval, validEpisode, episodeKey, sourceFor, label, canForce, canCancel, canResume, payload, transition };
+    return { key, historyUrl, positionDelay, terminal, active, initial, mergeRanges, percent, interval, advancePosition, validEpisode, episodeKey, sourceFor, label, canForce, canCancel, canResume, payload, transition };
 })();

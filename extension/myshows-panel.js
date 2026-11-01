@@ -39,7 +39,7 @@ const RezkaMyShowsPanel = (() => {
         enabled.addEventListener('change', () => command('configure', { enabled: enabled.checked }));
         enabledLabel.append(enabledText, enabled);
         const thresholdLabel = element('label', 'setting stacked');
-        const thresholdText = element('span', 'setting-text'); thresholdText.append(element('span', 'setting-name', 'Когда отмечать серию'), element('span', 'setting-description', 'По просмотренной части. Перемотка вперёд не засчитывается.'));
+        const thresholdText = element('span', 'setting-text'); thresholdText.append(element('span', 'setting-name', 'Когда отмечать серию'), element('span', 'setting-description', `После перемотки смотрите ещё ${M.positionDelay} секунд — зачтётся позиция плеера. Пауза и загрузка не считаются.`));
         const threshold = element('select'); threshold.setAttribute('aria-label', 'Просмотренная часть для отметки');
         for (const value of [80, 90, 95]) { const option = element('option', '', `${value}% серии`); option.value = value; threshold.append(option); }
         threshold.addEventListener('change', () => command('configure', { threshold: Number(threshold.value) }));
@@ -156,7 +156,10 @@ const RezkaMyShowsPanel = (() => {
                 const meta = element('div', 'myshows-entry-meta');
                 meta.append(element('span', 'myshows-episode', M.label(entry.episode)), element('span', 'myshows-state', labels[entry.status] || 'Нужно внимание'));
                 meta.lastChild.dataset.status = entry.status; row.append(meta);
-                if (entry.status === 'watching') row.append(element('p', 'myshows-description', `Просмотрено ${Math.floor(entry.progress)}% · Отметим после ${state.threshold}%`));
+                if (entry.status === 'watching') {
+                    row.append(element('p', 'myshows-description', `Учтено ${Math.floor(entry.progress)}% · Отметим после ${state.threshold}%`));
+                    if (entry.confirmedPosition > 0 && entry.progress > entry.watchedProgress) row.append(element('p', 'myshows-description', 'По позиции плеера, подтверждённой просмотром'));
+                }
                 if (entry.manualAt) row.append(element('p', 'myshows-description', 'По кнопке «Засчитать серию»'));
                 if (entry.status === 'cancelled' || entry.reason) row.append(element('p', 'myshows-description', entry.status === 'cancelled' ? cancelledDescription(entry) : entry.reason));
                 const actions = element('div', 'myshows-actions');

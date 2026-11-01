@@ -286,6 +286,9 @@
         if (!episode || rezkaId !== episode.rezkaId || !Number.isFinite(duration) || duration < 60 || duration > 43200
             || !Array.isArray(message.ranges) || message.ranges.length > 1000) throw fail('input');
         const ranges = M.mergeRanges(message.ranges, duration);
+        const confirmedPosition = message.confirmedPosition ?? 0;
+        if (!Number.isFinite(confirmedPosition) || confirmedPosition < 0 || confirmedPosition > duration
+            || (confirmedPosition > 0 && !ranges.some(([start, end]) => start <= confirmedPosition && end >= confirmedPosition))) throw fail('input');
         if (!ranges.length) return;
         const tracking = await edit(state => {
             if (!state.enabled || state.connection !== 'connected' || state.account !== message.account) return;
@@ -299,10 +302,12 @@
                 state.entries.push(entry);
             }
             // Different cuts/translations must not fill each other's missing footage.
-            if (Math.abs(entry.duration - duration) > Math.max(5, entry.duration * .02)) entry.ranges = [];
+            if (Math.abs(entry.duration - duration) > Math.max(5, entry.duration * .02)) { entry.ranges = []; entry.confirmedPosition = 0; }
             entry.duration = duration; entry.episode = episode;
             entry.ranges = M.mergeRanges([...entry.ranges, ...ranges], duration);
-            entry.progress = M.percent(entry.ranges, duration); entry.updatedAt = Date.now();
+            entry.watchedProgress = M.percent(entry.ranges, duration);
+            entry.confirmedPosition = Math.min(duration, Math.max(entry.confirmedPosition || 0, confirmedPosition));
+            entry.progress = Math.max(entry.watchedProgress, entry.confirmedPosition / duration * 100); entry.updatedAt = Date.now();
             if (entry.progress >= state.threshold) { entry.threshold = state.threshold; M.transition(entry, 'queued'); }
             return entry.status === 'watching';
         });

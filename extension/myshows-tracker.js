@@ -4,6 +4,7 @@
     const M = RezkaMyShows;
     let config = { enabled: false, account: '' }, previous = null, flushing = false, stopped = false;
     let video = null, lastFlush = 0, generation = 0, lastKey = '', lastSource = '', waitingSource = null;
+    let positionSeconds = 0, lastDuration = 0;
     const pending = new Map(), finished = new Set();
     const text = selector => document.querySelector(selector)?.textContent.trim() || '';
     function identity() {
@@ -33,21 +34,24 @@
                 pending.delete(key);
                 try {
                     const reply = await chrome.runtime.sendMessage({ type: 'myshows:progress', account: batch.account,
-                        episode: batch.episode, duration: batch.duration, ranges: batch.ranges });
+                        episode: batch.episode, duration: batch.duration, ranges: batch.ranges, confirmedPosition: batch.confirmedPosition });
                     if (!reply?.ok) throw new Error('save');
                     if (reply.tracking === false) { finished.add(key); pending.delete(key); }
                 } catch {
                     const newer = pending.get(key);
-                    if (newer && Math.abs(newer.duration - batch.duration) < 5) newer.ranges = M.mergeRanges([...batch.ranges, ...newer.ranges], newer.duration);
+                    if (newer && Math.abs(newer.duration - batch.duration) <= 5) {
+                        newer.ranges = M.mergeRanges([...batch.ranges, ...newer.ranges], newer.duration);
+                        newer.confirmedPosition = Math.min(newer.duration, Math.max(batch.confirmedPosition, newer.confirmedPosition));
+                    }
                     else if (!newer) pending.set(key, batch);
                     break;
                 }
             }
         } finally { flushing = false; lastFlush = performance.now(); }
     }
-    function reset() { previous = null; generation++; }
+    function reset() { previous = null; positionSeconds = 0; generation++; }
     function sample() {
-        if (stopped || !config.enabled || !config.account) { previous = null; return; }
+        if (stopped || !config.enabled || !config.account) { reset(); return; }
         const currentVideo = document.querySelector('#cdnplayer video, #player video, video');
         if (video !== currentVideo) {
             video = currentVideo; reset();
@@ -57,31 +61,37 @@
             }
         }
         const episode = identity();
-        if (!video || !episode || !Number.isFinite(video.duration) || video.duration < 60 || video.duration > 43200) { previous = null; return; }
+        if (!video || !episode || !Number.isFinite(video.duration) || video.duration < 60 || video.duration > 43200) { reset(); return; }
+        if (lastDuration && Math.abs(lastDuration - video.duration) > 5) reset();
+        lastDuration = video.duration;
         const key = M.episodeKey(episode);
         if (key !== lastKey) {
             waitingSource = lastKey && video.currentSrc === lastSource ? lastSource : null;
-            previous = null; lastKey = key;
+            reset(); lastKey = key;
         }
         lastSource = video.currentSrc;
         if (waitingSource !== null) {
-            if (video.currentSrc === waitingSource) { previous = null; return; }
+            if (video.currentSrc === waitingSource) { reset(); return; }
             waitingSource = null;
         }
         const batchKey = config.account + ':' + key;
-        if (finished.has(batchKey)) { previous = null; return; }
+        if (finished.has(batchKey)) { reset(); return; }
         const current = { key: key + ':' + generation, source: video.currentSrc, time: video.currentTime, wall: performance.now(),
             rate: video.playbackRate, playing: !video.paused && !video.seeking && video.readyState >= 2, seeking: video.seeking };
         const range = M.interval(previous, current);
+        const confirmation = M.advancePosition(positionSeconds, previous, current);
+        const newlyConfirmed = positionSeconds < M.positionDelay && confirmation.seconds >= M.positionDelay;
+        positionSeconds = confirmation.seconds;
         previous = current;
         if (range) {
             let batch = pending.get(batchKey);
-            if (!batch) { batch = { account: config.account, episode, duration: video.duration, ranges: [] }; pending.set(batchKey, batch); }
-            if (Math.abs(batch.duration - video.duration) > 5) batch.ranges = [];
+            if (!batch) { batch = { account: config.account, episode, duration: video.duration, ranges: [], confirmedPosition: 0 }; pending.set(batchKey, batch); }
+            if (Math.abs(batch.duration - video.duration) > 5) { batch.ranges = []; batch.confirmedPosition = 0; }
             batch.duration = video.duration;
             batch.ranges = M.mergeRanges([...batch.ranges, range], video.duration);
+            batch.confirmedPosition = Math.min(video.duration, Math.max(batch.confirmedPosition, confirmation.position));
         }
-        if (performance.now() - lastFlush >= 10000) flush();
+        if (newlyConfirmed || performance.now() - lastFlush >= 10000) flush();
     }
     function configure(state) {
         const next = { enabled: !!state?.enabled && state?.connection === 'connected', account: state?.account || '' };
