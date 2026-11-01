@@ -1,10 +1,10 @@
 {
   "manifest_version": 3,
   "name": "Rezka Custom",
-  "version": "0.5.2",
+  "version": "0.6.0",
   "description": "HDrezka: оформление, плеер, настройки и отдельная страница поиска с фильтрами.",
   "minimum_chrome_version": "116",
-  "permissions": ["storage", "declarativeNetRequestWithHostAccess", "sidePanel"],
+  "permissions": ["storage", "declarativeNetRequestWithHostAccess", "sidePanel", "alarms"],
   "host_permissions": ["http://*/*", "https://*/*"],
   "background": { "service_worker": "background.js" },
   "action": { "default_title": "Rezka Custom — настройки" },
@@ -33,8 +33,15 @@
       "matches": ["http://*/*", "https://*/*"],
       "include_globs": ["http*://*rezka*/*", "http*://rezkify.com/*", "http*://rezkery.com/*", "http*://kinopub.me/*"],
       "exclude_matches": ["*://*.home/*", "*://*.local/*"],
-      "js": ["search-core.js", "search-style.js", "watched-site.js", "watched.js", "search-page.js"],
+      "js": ["search-core.js", "search-style.js", "watched-site.js", "watched.js", "search-page.js", "myshows-core.js", "myshows-tracker.js"],
       "run_at": "document_end",
+      "all_frames": false,
+      "world": "ISOLATED"
+    },
+    {
+      "matches": ["https://myshows.me/profile/watch-history/*", "https://myshows.me/view/episode/*"],
+      "js": ["myshows-site.js"],
+      "run_at": "document_idle",
       "all_frames": false,
       "world": "ISOLATED"
     }

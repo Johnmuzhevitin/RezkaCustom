@@ -39,7 +39,7 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
 // Limit extension requests and their redirects to supported sites and IMDb.
 async function configureNetworkRules() {
     await chrome.declarativeNetRequest.updateDynamicRules({
-        removeRuleIds: [1, 2, 3, 4],
+        removeRuleIds: [1, 2, 3, 4, 5],
         addRules: [{
             id: 2, priority: 1, action: { type: "block" },
             condition: { regexFilter: "^https?://", initiatorDomains: [chrome.runtime.id], resourceTypes: ["xmlhttprequest"] }
@@ -52,6 +52,9 @@ async function configureNetworkRules() {
         }, {
             id: 4, priority: 4, action: { type: "block" },
             condition: { regexFilter: "^https?://[^/]+\\.(home|local)(:[0-9]+)?/", initiatorDomains: [chrome.runtime.id], resourceTypes: ["xmlhttprequest"] }
+        }, {
+            id: 5, priority: 2, action: { type: "allow" },
+            condition: { regexFilter: "^https://myshows\\.me/scrobble/(check|stop)$", initiatorDomains: [chrome.runtime.id], resourceTypes: ["xmlhttprequest"] }
         }]
     });
 }
@@ -104,3 +107,5 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
     );
     return true;
 });
+
+importScripts('myshows-core.js', 'myshows-worker.js');

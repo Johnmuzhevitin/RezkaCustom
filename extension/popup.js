@@ -4,7 +4,8 @@ const sectionCopy = {
     view: ['Под ваш экран', 'Оформление сайта, в котором удобно смотреть.'],
     player: ['Ваш способ смотреть', 'Качество видео, размер плеера, серии и управление.'],
     hide: ['Оставьте главное', 'Уберите отвлекающие блоки и сверните лишнее.'],
-    filter: ['Выберите, что видеть', 'Фильтруйте каталог по странам производства.']
+    filter: ['Выберите, что видеть', 'Фильтруйте каталог по странам производства.'],
+    myshows: ['MyShows', 'Автоматические отметки, очередь и история синхронизации.']
 };
 const copy = {
     'content-size': ['view', 'Ширина страницы', ''],
@@ -253,6 +254,16 @@ function updateControls() {
 function render() {
     const query = $('#search-input').value.trim().toLocaleLowerCase('ru');
     clearTimeout(searchAnnouncement);
+    RezkaMyShowsPanel.unmount();
+    if (section === 'myshows') {
+        content.replaceChildren();
+        content.setAttribute('role', 'tabpanel');
+        content.setAttribute('aria-labelledby', 'tab-myshows');
+        content.setAttribute('aria-busy', 'false');
+        $('#search-status').textContent = '';
+        RezkaMyShowsPanel.mount(content, query);
+        return;
+    }
     // A search has its own heading; the selected tab continues to identify the return destination.
     content.setAttribute('role', query ? 'region' : 'tabpanel');
     content.setAttribute('aria-labelledby', query ? 'results-heading' : 'tab-' + section);
@@ -267,13 +278,19 @@ function render() {
         const [group, label, description] = details(config);
         return query ? `${label} ${description} ${config.label}`.toLocaleLowerCase('ru').includes(query) : group === section;
     });
+    const myshowsResult = query && 'myshows синхронизация автоматические отметки очередь история'.includes(query);
+    if (myshowsResult) {
+        const destination = el('button', 'text-button search-destination', 'MyShows — отметки, очередь и история');
+        destination.addEventListener('click', () => selectSection('myshows'));
+        content.append(destination);
+    }
     if (query) {
-        const count = selected.length;
+        const count = selected.length + Number(!!myshowsResult);
         searchAnnouncement = setTimeout(() => {
             $('#search-status').textContent = count ? `По запросу «${query}» найдено: ${count}.` : `По запросу «${query}» ничего не найдено. Попробуйте другой запрос.`;
         }, 250);
     }
-    if (!selected.length) {
+    if (!selected.length && !myshowsResult) {
         const empty = el('div', 'empty');
         empty.append(el('h2', '', 'Ничего не нашлось'), el('p', '', 'Попробуйте «серии», «реклама» или «ширина».'));
         const clear = el('button', 'text-button', 'Очистить поиск');
@@ -310,6 +327,8 @@ function render() {
 function selectSection(next, focus = false) {
     section = next;
     $('#search-input').value = '';
+    $('#search-input').placeholder = next === 'myshows' ? 'Найти сериал в записях' : 'Найти настройку';
+    $('#search-input').setAttribute('aria-label', $('#search-input').placeholder);
     for (const button of document.querySelectorAll('[role="tab"]')) {
         const selected = button.dataset.section === next;
         button.setAttribute('aria-selected', String(selected)); button.tabIndex = selected ? 0 : -1;
