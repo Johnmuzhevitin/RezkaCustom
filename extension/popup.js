@@ -78,19 +78,31 @@ async function refreshConnection() {
     const tab = targetTab;
     connected = false;
     $('#site-dot').classList.remove('connected');
-    if (!tab || !RezkaNetwork.isSite(tab.url)) {
+    const supported = tab && RezkaNetwork.isSite(tab.url);
+    $('#site-label').textContent = supported ? new URL(tab.url).hostname + ' · подключаемся…' : 'Настройки для всех зеркал Rezka';
+    notice('');
+    const [workerBuild, state] = await Promise.all([
+        chrome.runtime.sendMessage({ type: 'rezka:build-info' }).catch(() => null),
+        supported ? chrome.tabs.sendMessage(tab.id, { type: 'rezka:settings-state' }, { frameId: 0 }).catch(() => null) : null
+    ]);
+    if (id !== refreshId) return;
+    $('#version').title = `Панель: ${REZKA_BUILD.id}\nРасширение: ${workerBuild?.id || 'не определено'}\nСтраница: ${state?.build?.id || 'не определено'}`;
+    if (!workerBuild?.id || workerBuild.id !== REZKA_BUILD.id) {
+        $('#site-label').textContent = 'Нужно проверить обновление расширения';
+        notice((workerBuild?.id ? 'Загруженные файлы расширения не совпадают. ' : 'Не удалось определить сборку расширения. ')
+            + 'Обновите Rezka Custom в chrome://extensions/ и откройте панель заново.', false, true);
+        return;
+    }
+    if (!supported) {
         $('#site-label').textContent = 'Настройки для всех зеркал Rezka';
         notice('Изменения применятся, когда вы откроете Rezka.');
         return;
     }
-    $('#site-label').textContent = new URL(tab.url).hostname + ' · подключаемся…';
-    notice('');
-    let state;
-    try { state = await chrome.tabs.sendMessage(tab.id, { type: 'rezka:settings-state' }, { frameId: 0 }); } catch { /* Existing tabs need a reload after an extension update. */ }
-    if (id !== refreshId) return;
-    connected = !!state?.connected;
+    const staleBuild = state?.connected && state.build?.id !== workerBuild.id;
+    connected = !!state?.connected && !staleBuild;
     $('#site-dot').classList.toggle('connected', connected);
     $('#site-label').textContent = new URL(tab.url).hostname + (connected ? ' · подключено' : ' · нужно обновить страницу');
+    if (staleBuild) { notice('Обновите эту страницу, чтобы загрузить текущую сборку расширения.', true); return; }
     if (!connected) { notice('Обновите эту страницу, чтобы подключить настройки.', true); return; }
     loadConfigs(state.settings);
     if (state.errors?.length) notice('Часть изменений не применилась. Обновите страницу.', true, true);
@@ -342,7 +354,7 @@ chrome.storage.onChanged.addListener((changes, area) => {
     try {
         data = await chrome.storage.local.get(null);
         loadConfigs();
-        $('#version').textContent = 'v' + chrome.runtime.getManifest().version;
+        $('#version').textContent = `v${REZKA_BUILD.version} · ${REZKA_BUILD.id.slice(0, 8)}`;
         selectSection(sectionCopy[data['ui:last-section']] ? data['ui:last-section'] : 'view');
         chrome.tabs.onActivated.addListener(info => {
             if (targetWindowId === undefined || info.windowId === targetWindowId) followActiveTab().catch(() => notice('Не удалось подключиться к вкладке. Откройте панель заново.', false, true));

@@ -1,4 +1,10 @@
-importScripts("network-policy.js", "settings-schema.js");
+importScripts("build-info.js", "network-policy.js", "settings-schema.js");
+
+chrome.runtime.onMessage.addListener((message, sender, respond) => {
+    if (message?.type !== 'rezka:build-info') return;
+    if (sender.id !== chrome.runtime.id || sender.url !== chrome.runtime.getURL('popup.html')) return;
+    respond(REZKA_BUILD);
+});
 
 // Keep the same toolbar entry point, with a full-height, persistent side panel.
 chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true })

@@ -9,6 +9,14 @@ const RezkaSettings = {
         } }).catch(() => {});
     },
     attach({ configs, applied, initialization, setBodyClass, afterStart, afterEnd }) {
+        const loadedAt = new Date().toISOString();
+        const markBuild = () => {
+            if (window.top !== window) return;
+            document.documentElement.dataset.rezkaBuild = REZKA_BUILD.id;
+            document.documentElement.dataset.rezkaVersion = REZKA_BUILD.version;
+        };
+        if (document.documentElement) markBuild();
+        else document.addEventListener('DOMContentLoaded', markBuild, { once: true });
         const pendingReload = new Set();
         const errors = new Set();
         const installedEffects = new Set();
@@ -66,7 +74,8 @@ const RezkaSettings = {
                 await Promise.all(initialization.values());
                 // Read persisted values too, closing the storage-event/message race.
                 await Promise.all([...configs.keys()].map(enqueue));
-                respond({ connected: true, pendingReload: [...pendingReload], errors: [...errors],
+                respond({ connected: true, build: REZKA_BUILD, loadedAt,
+                    pendingReload: [...pendingReload], errors: [...errors],
                     settings: [...configs.values()].map(serialize) });
             })().catch(() => respond({ connected: false }));
             return true;
