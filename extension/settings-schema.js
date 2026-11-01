@@ -1,5 +1,23 @@
-// Generated from the pinned upstream setting declarations.
+// Generated from the pinned upstream declarations and explicit extension patches.
 const REZKA_SETTINGS = [
+  {
+    "name": "player-max-quality",
+    "label": "Всегда максимальное качество",
+    "group": "Плеер",
+    "defaultIndex": 1,
+    "options": [
+      {
+        "text": "Выкл",
+        "value": false,
+        "reload": false
+      },
+      {
+        "text": "Вкл",
+        "value": true,
+        "reload": false
+      }
+    ]
+  },
   {
     "name": "content-size",
     "label": "Максимальная ширина",

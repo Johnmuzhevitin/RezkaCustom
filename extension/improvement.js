@@ -3894,6 +3894,16 @@
         missingSettingHandler,
     });
     r4.player = initPlayer();
+    r4.settings.createTumblerSetting({
+        name: "player-max-quality",
+        label: "Всегда максимальное качество",
+        submenu: "Плеер",
+        classes: ["r4-on-of-tumbler"],
+        options: [
+            { text: "Выкл", value: false, start: () => RezkaPlayer.call("max-quality", false) },
+            { text: "Вкл", value: true, default: true, start: () => RezkaPlayer.call("max-quality", true) }
+        ]
+    });
 
     initSettings();
     initContentSizeTumbler();

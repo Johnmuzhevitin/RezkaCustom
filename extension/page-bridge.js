@@ -15,7 +15,9 @@
         let result;
         let error;
         try {
-            if (message.method === "build") {
+            if (message.method === "max-quality") {
+                result = RezkaQuality.setEnabled(message.value);
+            } else if (message.method === "build") {
                 if (typeof sof === "undefined" || typeof sof.tv?.buildCDNPlayer !== "function") throw new Error("Плеер ещё не готов.");
                 sof.tv.buildCDNPlayer();
             } else if (commands.has(message.method)) {

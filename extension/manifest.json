@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Rezka Custom",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "description": "Самостоятельная версия HDrezka Improvement 2.1.8: оформление, плеер и настройки.",
   "minimum_chrome_version": "116",
   "permissions": ["storage", "declarativeNetRequestWithHostAccess", "sidePanel"],
@@ -15,7 +15,7 @@
       "matches": ["http://*/*", "https://*/*"],
       "include_globs": ["http*://*rezka*/*", "http*://rezkify.com/*", "http*://rezkery.com/*", "http*://kinopub.me/*"],
       "exclude_matches": ["*://*.home/*", "*://*.local/*"],
-      "js": ["page-bridge.js"],
+      "js": ["player-quality.js", "page-bridge.js"],
       "run_at": "document_start",
       "all_frames": true,
       "world": "MAIN"
