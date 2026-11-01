@@ -3,6 +3,7 @@ const RezkaMyShowsPanel = (() => {
     const labels = { watching: 'Смотрю', queued: 'В очереди', sending: 'Отправляем', confirming: 'Подтверждаем', checking: 'Проверяем',
         attention: 'Нужно внимание', done: 'Отмечено в MyShows', cancelled: 'Отменено', reset: 'Сброшено в расширении' };
     const resetHint = 'Сбросить локальную отметку и прогресс. Состояние в MyShows не изменится. Повторное засчитывание — вручную.';
+    const completedDescription = 'Отметка проверена при последней синхронизации. Если вы сняли её в MyShows, сбросьте запись здесь.';
     const cancelledDescription = entry => entry.submittedAt
         ? 'Запрос уже отправлен. Проверьте результат в MyShows: остановка синхронизации не снимает отметку на сайте.'
         : `Отправка отменена. Можно продолжить отслеживание или засчитать ${M.isMovie(entry.episode) ? 'фильм' : 'серию'} вручную.`;
@@ -21,6 +22,15 @@ const RezkaMyShowsPanel = (() => {
     function link(name, url) {
         const node = element('a', 'myshows-link', name); node.href = url; node.target = '_blank'; node.rel = 'noopener noreferrer'; return node;
     }
+    function icon(node, name) {
+        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        svg.setAttribute('aria-hidden', 'true'); svg.setAttribute('focusable', 'false');
+        const use = document.createElementNS(svg.namespaceURI, 'use'); use.setAttribute('href', '#myshows-' + name);
+        svg.append(use); node.replaceChildren(svg); return use;
+    }
+    function iconLabel(node, name, hint = name) {
+        node.setAttribute('aria-label', name); node.title = hint;
+    }
     const date = time => new Date(time).toLocaleString('ru', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
     const visible = node => node?.isConnected && !node.closest('[hidden]') && !node.disabled;
     function keepFocus(previous, fallback) {
@@ -34,6 +44,7 @@ const RezkaMyShowsPanel = (() => {
         let current = null, currentRequest = 0, currentTabId = null, currentPending = false, searchTimer;
         let knownStatuses = null, lastConfirmation = '', lastSearch = '', lastStateMessage = '';
         let thresholdDraft = null;
+        let infoOwner = null, infoEventSignature = '';
         const rows = new Map();
         root.append(element('h1', '', 'MyShows'));
         const connection = element('section', 'myshows-connection'); connection.setAttribute('aria-label', 'Подключение MyShows');
@@ -137,6 +148,27 @@ const RezkaMyShowsPanel = (() => {
         const emptyTitle = element('h3'), emptyText = element('p'); empty.append(emptyTitle, emptyText);
         const more = button('Показать ещё', () => { limit += 50; renderList(); }, 'text-button'); more.hidden = true;
         root.append(connection, currentSection, message, announcement, settings, heading, filters, searchSummary, searchAnnouncement, list, more, link('Открыть историю в MyShows', M.historyUrl));
+        const info = element('div', 'myshows-info'); info.id = 'myshows-entry-info';
+        info.setAttribute('popover', 'auto'); info.setAttribute('role', 'dialog'); info.setAttribute('aria-labelledby', 'myshows-info-title');
+        const infoTitle = element('h2'); infoTitle.id = 'myshows-info-title';
+        const infoClose = button('', () => closeInfo(true), 'myshows-icon-button');
+        icon(infoClose, 'close'); iconLabel(infoClose, 'Закрыть сведения');
+        const infoHeader = element('div', 'myshows-info-header'); infoHeader.append(infoTitle, infoClose);
+        const infoStatus = element('p', 'myshows-state'), infoDate = element('p', 'myshows-description');
+        const infoDescription = element('p', 'myshows-description'), infoEvents = element('ol', 'myshows-events');
+        info.append(infoHeader, infoStatus, infoDate, infoDescription, element('h3', '', 'История событий'), infoEvents);
+        info.addEventListener('beforetoggle', event => {
+            if (event.newState === 'closed') {
+                infoOwner?.infoButton.setAttribute('aria-expanded', 'false'); infoOwner = null;
+            }
+        });
+        const dismissInfo = event => {
+            if (event.key === 'Escape' && infoOwner) {
+                event.preventDefault(); event.stopPropagation(); closeInfo(true);
+            }
+        };
+        document.addEventListener('keydown', dismissInfo, true);
+        root.append(info);
         const connected = () => state?.connection === 'connected';
         const progressText = entry => Number.isFinite(entry?.progress)
             ? `Учтено ${Math.floor(entry.progress)}% · ${connected() && state.enabled ? 'порог' : 'автоотметки на паузе, порог'} ${state.threshold}%` : '';
@@ -147,10 +179,10 @@ const RezkaMyShowsPanel = (() => {
             return labels[entry?.status] || '';
         }
         function explanation(entry) {
-            if (entry?.status === 'reset') return `Локальная отметка и прогресс сброшены. В MyShows ничего не изменилось. Нажмите «Засчитать ${M.isMovie(entry.episode) ? 'фильм' : 'серию'}», чтобы отметить просмотр заново.`;
             if (entry?.status === 'cancelled') return cancelledDescription(entry);
+            if (entry?.status === 'reset') return `Локальная отметка и прогресс сброшены. В MyShows ничего не изменилось. Нажмите «Засчитать ${M.isMovie(entry.episode) ? 'фильм' : 'серию'}», чтобы отметить просмотр заново.`;
             if (entry?.reason) return entry.reason;
-            if (entry?.status === 'done') return entry.manualAt ? 'Просмотр засчитан вручную. Отметка проверена на сайте.' : 'Отметка проверена на сайте.';
+            if (entry?.status === 'done') return `${entry.manualAt ? 'Просмотр засчитан вручную. ' : ''}${completedDescription}`;
             if (entry?.status === 'attention') return 'Не удалось завершить синхронизацию. Повторите проверку.';
             if (M.active.has(entry?.status)) return entry.status === 'queued' && (!connected() || (!state.enabled && !entry.manualPending))
                 ? 'Включите автоотметки, чтобы продолжить обработку очереди.' : 'Просмотр будет отмечен после проверки результата в MyShows.';
@@ -205,9 +237,9 @@ const RezkaMyShowsPanel = (() => {
             retryCurrent.hidden = entry?.status !== 'attention'; retryCurrent.disabled = busy || !connected();
             text(retryCurrent, entry?.submittedAt ? 'Проверить' : 'Повторить');
             cancelCurrent.hidden = !M.canCancel(entry); cancelCurrent.disabled = busy;
-            resetCurrent.hidden = !M.canReset(entry); resetCurrent.disabled = busy;
             text(cancelCurrent, entry?.submittedAt ? 'Остановить синхронизацию' : 'Отменить отправку');
             resumeCurrent.hidden = !M.canResume(entry); resumeCurrent.disabled = busy || !connected();
+            resetCurrent.hidden = !M.canReset(entry); resetCurrent.disabled = busy;
             currentLink.hidden = !M.remoteId(entry) && !entry?.submittedAt; currentLink.href = M.watchUrl(entry);
             text(currentLink, entry?.status === 'done' ? mediaLinkText(entry) : 'Проверить в MyShows');
             const playback = connected() && state.enabled && (!entry || entry.status === 'watching') ? current?.playback : null;
@@ -243,23 +275,56 @@ const RezkaMyShowsPanel = (() => {
             finally { currentPending = false; }
             if (!closed && request === currentRequest) showCurrent();
         }
+        function updateInfo(view) {
+            const { entry } = view;
+            text(infoTitle, `${entry.episode.title} · ${M.label(entry.episode)}`);
+            text(infoStatus, statusText(entry)); infoStatus.dataset.status = entry.status;
+            text(infoDate, date(entry.updatedAt || entry.createdAt) + (entry.manualAt ? ' · вручную' : ''));
+            describe(infoDescription, explanation(entry));
+            const signature = JSON.stringify([entry.id, entry.createdAt, entry.origin, entry.events]);
+            if (signature !== infoEventSignature) {
+                infoEventSignature = signature;
+                infoEvents.replaceChildren(element('li', '', date(entry.createdAt) + (entry.origin === 'manual' ? ' · Добавлена вручную' : ' · Начат просмотр')));
+                for (const event of entry.events || []) infoEvents.append(element('li', '', `${date(event.at)} · ${labels[event.status] || event.status}${event.reason ? '. ' + event.reason : ''}`));
+            }
+        }
+        function closeInfo(restoreFocus = false) {
+            const owner = infoOwner;
+            if (!owner) return;
+            info.hidePopover();
+            if (restoreFocus && visible(owner.infoButton)) owner.infoButton.focus({ preventScroll: true });
+        }
+        function showInfo(view) {
+            if (infoOwner === view) { closeInfo(true); return; }
+            closeInfo();
+            updateInfo(view); infoOwner = view;
+            view.infoButton.setAttribute('aria-expanded', 'true');
+            info.showPopover(); infoClose.focus({ preventScroll: true });
+        }
         function createRow(entry) {
             const row = element('article', 'myshows-entry'); row.dataset.id = entry.id;
             const title = element('h3'), episode = element('span', 'myshows-episode'), status = element('span', 'myshows-state');
             const identity = element('div', 'myshows-entry-identity'); identity.append(title, episode);
-            const meta = element('div', 'myshows-entry-meta'); meta.append(identity, status);
-            const progress = element('p', 'myshows-description'), position = element('p', 'myshows-description'), manual = element('p', 'myshows-description'), reason = element('p', 'myshows-description');
+            const icons = element('div', 'myshows-entry-icons');
+            const meta = element('div', 'myshows-entry-meta'); meta.append(identity, icons);
+            const progress = element('p', 'myshows-description'), position = element('p', 'myshows-description'), reason = element('p', 'myshows-description');
             const actions = element('div', 'myshows-actions');
-            const view = { row, title, episode, status, progress, position, manual, reason, entry, actions, buttons: {} };
+            const view = { row, title, episode, status, progress, position, reason, entry, actions, buttons: {} };
             for (const [type, name] of [['resume', 'Продолжить отслеживание'], ['force', 'Засчитать серию'], ['retry', 'Проверить'], ['cancel', 'Отменить отправку'], ['reset', 'Сбросить запись']]) {
                 const node = button(name, () => command(type, { id: view.entry.id, account: state.account }), 'text-button');
-                node.dataset.myshowsAction = entry.id + '-' + type; view.buttons[type] = node; actions.append(node);
+                if (type === 'reset') {
+                    node.className = 'myshows-icon-button'; icon(node, 'reset'); iconLabel(node, name, name + '. ' + resetHint);
+                } else actions.append(node);
+                node.dataset.myshowsAction = entry.id + '-' + type; view.buttons[type] = node;
             }
-            view.link = link(mediaLinkText(entry), M.watchUrl(entry)); actions.append(view.link);
-            view.details = element('details', 'myshows-events'); view.details.dataset.id = entry.id;
-            view.summary = element('summary'); view.events = element('ol');
-            view.details.append(view.summary, view.events);
-            row.append(meta, progress, position, manual, reason, actions, view.details);
+            view.link = link('', M.watchUrl(entry)); view.link.className = 'myshows-icon-button'; icon(view.link, 'external');
+            view.infoButton = button('', event => { event.preventDefault(); showInfo(view); }, 'myshows-icon-button');
+            view.infoIcon = icon(view.infoButton, 'history');
+            view.infoButton.setAttribute('popovertarget', info.id);
+            view.infoButton.setAttribute('aria-haspopup', 'dialog'); view.infoButton.setAttribute('aria-controls', info.id);
+            view.infoButton.setAttribute('aria-expanded', 'false'); view.infoButton.dataset.myshowsInfo = entry.id;
+            icons.append(view.infoButton, view.link, view.buttons.reset);
+            row.append(meta, status, progress, position, reason, actions);
             return view;
         }
         function updateRowActions(view) {
@@ -271,25 +336,23 @@ const RezkaMyShowsPanel = (() => {
             text(buttons.retry, entry.submittedAt ? 'Проверить' : 'Повторить');
             text(buttons.cancel, entry.submittedAt ? 'Остановить синхронизацию' : 'Отменить отправку');
             for (const [type, node] of Object.entries(buttons)) node.disabled = busy || (!['cancel', 'reset'].includes(type) && !connected());
-            view.link.hidden = !M.remoteId(entry) && !entry.submittedAt; view.link.href = M.watchUrl(entry);
-            text(view.link, M.remoteId(entry) ? mediaLinkText(entry) : 'Проверить в MyShows');
+            view.link.hidden = !M.remoteId(entry) && !entry.submittedAt && entry.status !== 'done'; view.link.href = M.watchUrl(entry);
+            iconLabel(view.link, M.remoteId(entry) ? mediaLinkText(entry) : 'Открыть историю в MyShows');
+            view.actions.hidden = ['resume', 'force', 'retry', 'cancel'].every(type => buttons[type].hidden);
         }
         function updateRow(view, entry) {
             view.entry = entry;
-            text(view.title, entry.episode.title); text(view.episode, M.label(entry.episode));
+            text(view.title, entry.episode.title); view.title.title = entry.episode.title; text(view.episode, M.label(entry.episode));
             text(view.status, statusText(entry)); view.status.dataset.status = entry.status;
+            view.status.hidden = entry.status === 'done';
+            view.infoButton.dataset.status = entry.status;
+            view.infoIcon.setAttribute('href', entry.status === 'done' ? '#myshows-done' : '#myshows-history');
+            iconLabel(view.infoButton, `Сведения об отметке: ${entry.episode.title} · ${M.label(entry.episode)}. ${statusText(entry)}`,
+                `${statusText(entry)} · ${date(entry.updatedAt || entry.createdAt)}${entry.manualAt ? ' · вручную' : ''}. Сведения об отметке`);
             describe(view.progress, entry.status === 'watching' ? progressText(entry) : '');
             describe(view.position, entry.status === 'watching' && entry.confirmedPosition > 0 && entry.progress > entry.watchedProgress
                 ? 'По позиции плеера, подтверждённой просмотром' : '');
-            describe(view.manual, entry.manualAt ? (entry.status === 'done' ? 'Засчитано вручную' : 'Добавлено вручную') : '');
-            describe(view.reason, explanation(entry));
-            text(view.summary, 'История · ' + date(entry.updatedAt || entry.createdAt));
-            const eventSignature = JSON.stringify([entry.createdAt, entry.origin, entry.events]);
-            if (eventSignature !== view.eventSignature) {
-                view.eventSignature = eventSignature;
-                view.events.replaceChildren(element('li', '', date(entry.createdAt) + (entry.origin === 'manual' ? ' · Добавлена вручную' : ' · Начат просмотр')));
-                for (const event of entry.events || []) view.events.append(element('li', '', `${date(event.at)} · ${labels[event.status] || event.status}${event.reason ? '. ' + event.reason : ''}`));
-            }
+            describe(view.reason, entry.status === 'done' ? '' : explanation(entry));
             updateRowActions(view);
         }
         function renderList() {
@@ -312,6 +375,7 @@ const RezkaMyShowsPanel = (() => {
                 else text(searchAnnouncement, '');
             }
             const focused = list.contains(document.activeElement) || document.activeElement === more ? document.activeElement : null;
+            const infoFocused = info.contains(document.activeElement);
             const liveIds = new Set(entries.map(entry => entry.id));
             for (const [id, view] of rows) if (!liveIds.has(id)) { view.row.remove(); rows.delete(id); }
             const shown = items.slice(0, limit), shownIds = new Set(shown.map(entry => entry.id));
@@ -319,7 +383,7 @@ const RezkaMyShowsPanel = (() => {
             if (!shown.length) {
                 text(emptyTitle, searchQuery ? 'Ничего не найдено' : filter === 'history' ? 'История пока пуста' : filter === 'attention' ? 'Всё в порядке' : 'Очередь пуста');
                 text(emptyText, searchQuery ? 'Проверены очередь, проблемы и история. Попробуйте название фильма, сериала или номер S01E01.'
-                    : filter === 'history' ? 'Здесь будут отмеченные и отменённые фильмы и серии.' : filter === 'attention' ? 'Просмотров, требующих проверки, нет.'
+                    : filter === 'history' ? 'Здесь будут отмеченные, отменённые и сброшенные фильмы и серии.' : filter === 'attention' ? 'Просмотров, требующих проверки, нет.'
                         : !connected() ? 'Подключите MyShows, чтобы отмечать просмотренные фильмы и серии.' : !state.enabled ? 'Автоотметки на паузе. Можно засчитать текущий просмотр вручную.'
                             : 'Начните смотреть фильм или серию. Прогресс появится примерно через 10 секунд.');
                 list.append(empty);
@@ -330,7 +394,12 @@ const RezkaMyShowsPanel = (() => {
                 if (list.children[index] !== view.row) list.insertBefore(view.row, list.children[index] || null);
             });
             more.hidden = items.length <= limit;
-            keepFocus(focused, searchQuery ? heading : filters.querySelector(`[data-filter="${filter}"]`));
+            const fallback = searchQuery ? heading : filters.querySelector(`[data-filter="${filter}"]`);
+            if (infoOwner) {
+                if (!shownIds.has(infoOwner.entry.id)) { closeInfo(); if (infoFocused) fallback.focus({ preventScroll: true }); }
+                else updateInfo(infoOwner);
+            }
+            keepFocus(focused, fallback);
         }
         function update(value) {
             if (closed) return;
@@ -372,7 +441,7 @@ const RezkaMyShowsPanel = (() => {
         refresh().catch(error => { if (!closed) { text(account, 'Не удалось загрузить MyShows'); describe(message, error.message); } });
         refreshCurrent();
         const currentTimer = setInterval(refreshCurrent, 1000);
-        dispose = () => { closed = true; ++currentRequest; settingsOpen = settings.open; clearInterval(currentTimer); clearTimeout(searchTimer); chrome.storage.onChanged.removeListener(listener); updateQuery = null; };
+        dispose = () => { closeInfo(); document.removeEventListener('keydown', dismissInfo, true); closed = true; ++currentRequest; settingsOpen = settings.open; clearInterval(currentTimer); clearTimeout(searchTimer); chrome.storage.onChanged.removeListener(listener); updateQuery = null; };
         return dispose;
     }
     return { mount, setQuery: query => updateQuery?.(query) || false, unmount: () => dispose() };

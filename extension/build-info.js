@@ -1,2 +1,2 @@
 // Generated last by tools/build.mjs from all other shipped files.
-const REZKA_BUILD = Object.freeze({"version":"0.7.2","id":"c42a19e2306420d7c4f671c5d7df97a5b7248e0fba798315f7c1a549afcb737d"});
+const REZKA_BUILD = Object.freeze({"version":"0.7.2","id":"b95710608335fdd23e363ed5f7b69fd119ce2418ddfc95080c4385f40c4254d3"});
