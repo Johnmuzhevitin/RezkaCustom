@@ -1118,15 +1118,22 @@
 
         function setNavbarLinksDefaultFilter(filter) {
             function replace(elem) {
-                const url = new URL(elem.href);
-                url.search = filter ? new URLSearchParams({ filter }).toString() : "";
-                elem.href = url;
+                if (elem.id === "rc-search-entry") return;
+                const href = elem.getAttribute("href")?.trim();
+                if (!href || href.startsWith("#")) return;
+                let url;
+                try { url = new URL(href, document.baseURI); }
+                catch { return; }
+                if (url.origin !== location.origin || !["http:", "https:"].includes(url.protocol)) return;
+                if (filter) url.searchParams.set("filter", filter);
+                else url.searchParams.delete("filter");
+                elem.href = url.href;
             }
 
             const navbar = document.querySelector(".b-topnav");
             if (navbar) {
-                navbar.querySelectorAll(".b-topnav__item-link").forEach(replace);
-                navbar.querySelectorAll(".b-topnav__sub_inner .left a").forEach(replace);
+                navbar.querySelectorAll("a.b-topnav__item-link[href]").forEach(replace);
+                navbar.querySelectorAll(".b-topnav__sub_inner .left a[href]").forEach(replace);
             }
         }
     }

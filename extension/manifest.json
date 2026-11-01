@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Rezka Custom",
-  "version": "0.3.3",
-  "description": "Самостоятельная версия HDrezka Improvement 2.1.8: оформление, плеер и настройки.",
+  "version": "0.4.0",
+  "description": "HDrezka: оформление, плеер, настройки и отдельная страница поиска с фильтрами.",
   "minimum_chrome_version": "116",
   "permissions": ["storage", "declarativeNetRequestWithHostAccess", "sidePanel"],
   "host_permissions": ["http://*/*", "https://*/*"],
@@ -27,6 +27,15 @@
       "js": ["network-policy.js", "gm-adapter.js", "player-client.js", "settings-controller.js", "vendor/r4-fonts.js", "vendor/r4-images.js", "vendor/r4-utils.js", "vendor/r4-settings.js", "improvement.js"],
       "run_at": "document_start",
       "all_frames": true,
+      "world": "ISOLATED"
+    },
+    {
+      "matches": ["http://*/*", "https://*/*"],
+      "include_globs": ["http*://*rezka*/*", "http*://rezkify.com/*", "http*://rezkery.com/*", "http*://kinopub.me/*"],
+      "exclude_matches": ["*://*.home/*", "*://*.local/*"],
+      "js": ["search-core.js", "search-style.js", "search-page.js"],
+      "run_at": "document_end",
+      "all_frames": false,
       "world": "ISOLATED"
     }
   ]

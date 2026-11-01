@@ -1,0 +1,94 @@
+/* Shared caption roles for native catalogue cards and shadow-root search cards.
+   Keep the site's selected font and natural text height; exclude the slider. */
+:host, body.r4-style {
+    --rc-card-ink: #222a30;
+    --rc-card-muted: #53616a;
+    --rc-card-title-size: 16px;
+    --rc-card-title-line: 22px;
+    --rc-card-meta-size: 14px;
+    --rc-card-meta-line: 20px;
+    --rc-card-type-size: 13px;
+    --rc-card-type-line: 18px;
+    --rc-card-poster-gap: 12px;
+    --rc-card-text-gap: 6px;
+    --rc-card-row-gap: 28px;
+}
+:host([data-theme="dark"]), body.r4-style.b-theme__template__night {
+    --rc-card-ink: #edf2f4;
+    --rc-card-muted: #a6b7bf;
+}
+
+body.r4-style .b-content__inline_items .b-content__inline_item .b-content__inline_item-link > a:any-link,
+:host .card h3 {
+    display: block;
+    margin: 0;
+    color: var(--rc-card-ink);
+    font-size: var(--rc-card-title-size);
+    line-height: var(--rc-card-title-line);
+    font-weight: 600;
+    overflow-wrap: anywhere;
+}
+body.r4-style .b-content__inline_items .b-content__inline_item-link > div:not(.rating),
+:host .card p {
+    margin: var(--rc-card-text-gap) 0 0;
+    color: var(--rc-card-muted);
+    font-size: var(--rc-card-meta-size);
+    line-height: var(--rc-card-meta-line);
+    font-weight: 400;
+    overflow-wrap: anywhere;
+}
+body.r4-style .b-content__inline_items .b-content__inline_item .cat .entity,
+:host .card-type {
+    color: var(--rc-card-muted);
+    font-size: var(--rc-card-type-size);
+    line-height: var(--rc-card-type-line);
+    font-weight: 400;
+    font-style: normal;
+}
+:host .card-type {
+    display: block;
+    margin: var(--rc-card-poster-gap) 0 var(--rc-card-text-gap);
+}
+:host .card p.episode { color: var(--rc-card-ink); }
+:host .cards { row-gap: var(--rc-card-row-gap); }
+
+body.r4-style .b-content__inline_items .b-content__inline_item {
+    margin-bottom: var(--rc-card-row-gap);
+}
+body.r4-style .b-content__inline_items .b-content__inline_item-link {
+    padding: var(--rc-card-text-gap) 0 0;
+}
+body.r4-style .b-content__inline_items .b-content__inline_item-cover {
+    background: transparent;
+    border-radius: 0;
+}
+body.r4-style .b-content__inline_items .b-content__inline_item-cover img { border-radius: 5px; }
+body.r4-style .b-content__inline_items .b-content__inline_item-cover > a::after {
+    bottom: calc(var(--rc-card-poster-gap) + var(--rc-card-type-line));
+    border-radius: 5px;
+}
+/* The native type stays in its existing link, but reads like search metadata. */
+body.r4-style .b-content__inline_items .b-content__inline_item .cat {
+    height: auto;
+    padding: var(--rc-card-poster-gap) 0 0;
+    background: transparent !important;
+    line-height: var(--rc-card-type-line);
+}
+body.r4-style .b-content__inline_items .b-content__inline_item .cat .entity {
+    display: block !important;
+    position: static;
+    height: auto;
+    margin: 0;
+    padding: 0;
+    overflow: visible;
+    white-space: normal;
+}
+body.r4-style .b-content__inline_items .b-content__inline_item .cat .icon { display: none; }
+/* Keep the native episode badge on the poster, above the type's new height. */
+body.r4-style .b-content__inline_items .b-content__inline_item .info {
+    bottom: calc(var(--rc-card-poster-gap) + var(--rc-card-type-line));
+    margin-bottom: 0;
+    font-size: var(--rc-card-meta-size);
+    line-height: var(--rc-card-meta-line);
+    font-weight: 400;
+}
