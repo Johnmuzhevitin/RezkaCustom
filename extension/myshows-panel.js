@@ -4,7 +4,7 @@ const RezkaMyShowsPanel = (() => {
         attention: 'Нужно внимание', done: 'Отмечено в MyShows', cancelled: 'Отменено' };
     const cancelledDescription = entry => entry.submittedAt
         ? 'Запрос уже отправлен. Проверьте результат в MyShows: остановка синхронизации не снимает отметку на сайте.'
-        : 'Отправка отменена. Можно продолжить отслеживание или засчитать серию вручную.';
+        : `Отправка отменена. Можно продолжить отслеживание или засчитать ${M.isMovie(entry.episode) ? 'фильм' : 'серию'} вручную.`;
     let dispose = () => {}, updateQuery = null, selectedFilter = 'queue', settingsOpen = false;
     const element = (tag, className, value) => {
         const node = document.createElement(tag);
@@ -39,7 +39,7 @@ const RezkaMyShowsPanel = (() => {
         const connectionDescription = element('p', 'myshows-description');
         const connectButton = button('Подключить MyShows', () => command('connect'), 'myshows-button myshows-primary');
         connection.append(account, connectionDescription, connectButton);
-        const currentSection = element('section', 'myshows-current'); currentSection.setAttribute('aria-label', 'Текущая серия');
+        const currentSection = element('section', 'myshows-current'); currentSection.setAttribute('aria-label', 'Текущий просмотр');
         const currentHeading = element('div', 'myshows-current-heading');
         const currentBody = element('div', 'myshows-current-body');
         const currentTitle = element('h3', 'myshows-account');
@@ -53,12 +53,13 @@ const RezkaMyShowsPanel = (() => {
         currentProgress.append(currentCredit, currentThreshold);
         const progressTrack = element('div', 'myshows-progress-track'); progressTrack.hidden = true;
         const progressMeter = element('progress', 'myshows-progress-meter'); progressMeter.max = 100;
-        progressMeter.setAttribute('aria-label', 'Учтённая часть серии');
+        progressMeter.setAttribute('aria-label', 'Учтённая часть просмотра');
         const thresholdMarker = element('span', 'myshows-threshold-marker'); thresholdMarker.setAttribute('aria-hidden', 'true');
         progressTrack.append(progressMeter, thresholdMarker);
         const confirmation = element('p', 'myshows-confirmation');
         const currentState = element('p', 'myshows-state'); currentState.tabIndex = -1;
-        currentHeading.append(element('h2', 'myshows-journal-title', 'Текущая серия'), currentState);
+        const currentHeadingTitle = element('h2', 'myshows-journal-title', 'Текущий просмотр');
+        currentHeading.append(currentHeadingTitle, currentState);
         const currentDescription = element('p', 'myshows-description');
         const currentEntry = () => current && state?.entries.find(entry => entry.account === state.account && entry.key === current.key);
         const forceCurrent = button('Засчитать серию', () => {
@@ -91,11 +92,11 @@ const RezkaMyShowsPanel = (() => {
         enabledLabel.append(enabledText, enabled);
         const thresholdLabel = element('label', 'setting stacked');
         const thresholdText = element('span', 'setting-text');
-        const thresholdDescription = element('span', 'setting-description', `После перемотки или продолжения серии с сохранённого места позиция учитывается через ${M.positionDelay} секунд просмотра. Пауза и загрузка не считаются.`);
+        const thresholdDescription = element('span', 'setting-description', `После перемотки или продолжения с сохранённого места позиция учитывается через ${M.positionDelay} секунд просмотра. Пауза и загрузка не считаются.`);
         thresholdDescription.id = 'myshows-threshold-description';
-        thresholdText.append(element('span', 'setting-name', 'Когда отмечать серию'), thresholdDescription);
+        thresholdText.append(element('span', 'setting-name', 'Когда отмечать просмотр'), thresholdDescription);
         const threshold = element('select'); threshold.setAttribute('aria-label', 'Просмотренная часть для отметки'); threshold.setAttribute('aria-describedby', thresholdDescription.id);
-        for (const value of [80, 90, 95]) { const option = element('option', '', `${value}% серии`); option.value = value; threshold.append(option); }
+        for (const value of [80, 90, 95]) { const option = element('option', '', `${value}% просмотра`); option.value = value; threshold.append(option); }
         threshold.addEventListener('change', () => command('configure', { threshold: Number(threshold.value) }));
         thresholdLabel.append(thresholdText, threshold);
         const disconnectButton = button('Отключить MyShows', () => command('disconnect'), 'text-button');
@@ -117,7 +118,7 @@ const RezkaMyShowsPanel = (() => {
         const connected = () => state?.connection === 'connected';
         const progressText = entry => Number.isFinite(entry?.progress)
             ? `Учтено ${Math.floor(entry.progress)}% · ${connected() && state.enabled ? 'порог' : 'автоотметки на паузе, порог'} ${state.threshold}%` : '';
-        const episodeUrl = entry => entry?.episodeId ? `https://myshows.me/view/episode/${entry.episodeId}/` : M.historyUrl;
+        const mediaLinkText = entry => M.isMovie(entry?.episode) ? 'Фильм в MyShows' : 'Серия в MyShows';
         function statusText(entry) {
             if (entry?.status === 'watching' && (!connected() || !state.enabled)) return 'Учёт на паузе';
             if (entry?.status === 'queued' && (!connected() || (!state.enabled && !entry.manualPending))) return 'Очередь на паузе';
@@ -126,11 +127,11 @@ const RezkaMyShowsPanel = (() => {
         function explanation(entry) {
             if (entry?.status === 'cancelled') return cancelledDescription(entry);
             if (entry?.reason) return entry.reason;
-            if (entry?.status === 'done') return entry.manualAt ? 'Серия засчитана вручную. Отметка проверена на сайте.' : 'Отметка проверена на сайте.';
+            if (entry?.status === 'done') return entry.manualAt ? 'Просмотр засчитан вручную. Отметка проверена на сайте.' : 'Отметка проверена на сайте.';
             if (entry?.status === 'attention') return 'Не удалось завершить синхронизацию. Повторите проверку.';
             if (M.active.has(entry?.status)) return entry.status === 'queued' && (!connected() || (!state.enabled && !entry.manualPending))
-                ? 'Включите автоотметки, чтобы продолжить обработку очереди.' : 'Серия будет отмечена после проверки результата в MyShows.';
-            return connected() && !state.enabled ? 'Учёт просмотра на паузе. Эту серию можно засчитать вручную.' : '';
+                ? 'Включите автоотметки, чтобы продолжить обработку очереди.' : 'Просмотр будет отмечен после проверки результата в MyShows.';
+            return connected() && !state.enabled ? 'Учёт просмотра на паузе. Можно засчитать вручную.' : '';
         }
         async function command(type, extra = {}) {
             if (busy) return;
@@ -155,6 +156,10 @@ const RezkaMyShowsPanel = (() => {
         function showCurrent() {
             const focused = currentSection.contains(document.activeElement) ? document.activeElement : null;
             const entry = currentEntry();
+            const movie = M.isMovie(current?.episode);
+            text(currentHeadingTitle, current ? (movie ? 'Текущий фильм' : 'Текущая серия') : 'Текущий просмотр');
+            currentSection.setAttribute('aria-label', currentHeadingTitle.textContent);
+            text(forceCurrent, movie ? 'Засчитать фильм' : 'Засчитать серию');
             describe(currentTitle, current ? `${current.episode.title} · ${M.label(current.episode)}` : '');
             const hasProgress = !!current && Number.isFinite(entry?.progress);
             currentProgress.hidden = progressTrack.hidden = !hasProgress;
@@ -167,19 +172,19 @@ const RezkaMyShowsPanel = (() => {
                 progressTrack.style.setProperty('--myshows-threshold', `${state.threshold}%`);
                 thresholdMarker.title = `Порог автоотметки: ${state.threshold}%`;
             }
-            const status = current ? statusText(entry) || (connected() && state.enabled ? 'Ожидаем просмотр' : 'Учёт на паузе') : 'Серия не выбрана';
+            const status = current ? statusText(entry) || (connected() && state.enabled ? 'Ожидаем просмотр' : 'Учёт на паузе') : 'Просмотр не выбран';
             describe(currentState, status); currentState.dataset.status = entry?.status || '';
-            describe(currentDescription, !current ? 'Откройте серию на Rezka. Если она уже открыта, проверьте подключение страницы вверху панели.'
-                : !connected() ? 'Подключите MyShows, чтобы учитывать просмотр и отмечать серии.'
-                : explanation(entry) || (entry ? '' : 'Запустите просмотр или засчитайте серию вручную.'));
+            describe(currentDescription, !current ? 'Откройте фильм или серию на Rezka. Если страница уже открыта, проверьте её подключение вверху панели.'
+                : !connected() ? 'Подключите MyShows, чтобы учитывать просмотр фильмов и серий.'
+                : explanation(entry) || (entry ? '' : `Запустите просмотр или засчитайте ${movie ? 'фильм' : 'серию'} вручную.`));
             forceCurrent.hidden = !current || !M.canForce(entry) || entry?.status === 'attention'; forceCurrent.disabled = busy || !connected();
             retryCurrent.hidden = entry?.status !== 'attention'; retryCurrent.disabled = busy || !connected();
             text(retryCurrent, entry?.submittedAt ? 'Проверить' : 'Повторить');
             cancelCurrent.hidden = !M.canCancel(entry); cancelCurrent.disabled = busy;
             text(cancelCurrent, entry?.submittedAt ? 'Остановить синхронизацию' : 'Отменить отправку');
             resumeCurrent.hidden = !M.canResume(entry); resumeCurrent.disabled = busy || !connected();
-            currentLink.hidden = !entry?.episodeId && !entry?.submittedAt; currentLink.href = episodeUrl(entry);
-            text(currentLink, entry?.status === 'done' ? 'Серия в MyShows' : 'Проверить в MyShows');
+            currentLink.hidden = !M.remoteId(entry) && !entry?.submittedAt; currentLink.href = M.watchUrl(entry);
+            text(currentLink, entry?.status === 'done' ? mediaLinkText(entry) : 'Проверить в MyShows');
             const playback = connected() && state.enabled && (!entry || entry.status === 'watching') ? current?.playback : null;
             let confirmationText = '', phase = '';
             if (playback) {
@@ -225,7 +230,7 @@ const RezkaMyShowsPanel = (() => {
                 const node = button(name, () => command(type, { id: view.entry.id, account: state.account }), 'text-button');
                 node.dataset.myshowsAction = entry.id + '-' + type; view.buttons[type] = node; actions.append(node);
             }
-            view.link = link('Серия в MyShows', episodeUrl(entry)); actions.append(view.link);
+            view.link = link(mediaLinkText(entry), M.watchUrl(entry)); actions.append(view.link);
             view.details = element('details', 'myshows-events'); view.details.dataset.id = entry.id;
             view.summary = element('summary'); view.events = element('ol');
             view.details.append(view.summary, view.events);
@@ -234,13 +239,14 @@ const RezkaMyShowsPanel = (() => {
         }
         function updateRowActions(view) {
             const { entry, buttons } = view;
+            text(buttons.force, M.isMovie(entry.episode) ? 'Засчитать фильм' : 'Засчитать серию');
             buttons.resume.hidden = !M.canResume(entry); buttons.force.hidden = !M.canForce(entry);
             buttons.retry.hidden = entry.status !== 'attention'; buttons.cancel.hidden = !M.canCancel(entry);
             text(buttons.retry, entry.submittedAt ? 'Проверить' : 'Повторить');
             text(buttons.cancel, entry.submittedAt ? 'Остановить синхронизацию' : 'Отменить отправку');
             for (const [type, node] of Object.entries(buttons)) node.disabled = busy || (type !== 'cancel' && !connected());
-            view.link.hidden = !entry.episodeId && !entry.submittedAt; view.link.href = episodeUrl(entry);
-            text(view.link, entry.episodeId ? 'Серия в MyShows' : 'Проверить в MyShows');
+            view.link.hidden = !M.remoteId(entry) && !entry.submittedAt; view.link.href = M.watchUrl(entry);
+            text(view.link, M.remoteId(entry) ? mediaLinkText(entry) : 'Проверить в MyShows');
         }
         function updateRow(view, entry) {
             view.entry = entry;
@@ -286,10 +292,10 @@ const RezkaMyShowsPanel = (() => {
             for (const child of [...list.children]) if (!shownIds.has(child.dataset.id)) child.remove();
             if (!shown.length) {
                 text(emptyTitle, searchQuery ? 'Ничего не найдено' : filter === 'history' ? 'История пока пуста' : filter === 'attention' ? 'Всё в порядке' : 'Очередь пуста');
-                text(emptyText, searchQuery ? 'Проверены очередь, проблемы и история. Попробуйте название сериала или номер S01E01.'
-                    : filter === 'history' ? 'Здесь будут отмеченные и отменённые серии.' : filter === 'attention' ? 'Серий, требующих проверки, нет.'
-                        : !connected() ? 'Подключите MyShows, чтобы отмечать просмотренные серии.' : !state.enabled ? 'Автоотметки на паузе. Можно засчитать текущую серию вручную.'
-                            : 'Начните смотреть серию. Прогресс появится примерно через 10 секунд.');
+                text(emptyText, searchQuery ? 'Проверены очередь, проблемы и история. Попробуйте название фильма, сериала или номер S01E01.'
+                    : filter === 'history' ? 'Здесь будут отмеченные и отменённые фильмы и серии.' : filter === 'attention' ? 'Просмотров, требующих проверки, нет.'
+                        : !connected() ? 'Подключите MyShows, чтобы отмечать просмотренные фильмы и серии.' : !state.enabled ? 'Автоотметки на паузе. Можно засчитать текущий просмотр вручную.'
+                            : 'Начните смотреть фильм или серию. Прогресс появится примерно через 10 секунд.');
                 list.append(empty);
             }
             shown.forEach((entry, index) => {

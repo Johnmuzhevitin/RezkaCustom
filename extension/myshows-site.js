@@ -39,6 +39,21 @@
         return cards[0];
     }
     function inspect(card, request) {
+        if (request.kind !== undefined && !['movie', 'episode'].includes(request.kind)) throw new Error('match');
+        if (request.kind === 'movie') {
+            const ids = new Set();
+            for (const link of card.querySelectorAll('a[href]')) {
+                const url = new URL(link.getAttribute('href'), location.origin);
+                if (url.origin !== location.origin) continue;
+                if (url.pathname.startsWith('/view/episode/')) throw new Error('match');
+                const match = url.pathname.match(/^\/movie\/(\d+)\/$/);
+                if (match) ids.add(Number(match[1]));
+            }
+            const movieId = [...ids][0];
+            if (ids.size !== 1 || !Number.isSafeInteger(movieId) || movieId <= 0
+                || (request.movieId && request.movieId !== movieId)) throw new Error('match');
+            return { movieId, approved: !!card.querySelector('.ScrobbleCard__status--approved') };
+        }
         const episode = card.querySelector('a[href*="/view/episode/"]')?.getAttribute('href')?.match(/^\/view\/episode\/(\d+)\//)?.[1];
         const code = card.querySelector('.ScrobbleCard__title')?.textContent.match(/\bs(\d+)e(\d+)\b/i);
         if (!code || Number(code[1]) !== request.season || Number(code[2]) !== request.number) throw new Error('match');
@@ -55,7 +70,7 @@
         if (!card) throw new Error('missing');
         let result = inspect(card, request);
         if (result.approved) return result;
-        if (!request.allowApprove || !request.episodeId) throw new Error('manual');
+        if (!request.allowApprove || !(request.kind === 'movie' ? request.movieId : request.episodeId)) throw new Error('manual');
         if (!card.querySelector('.ScrobbleCard__status--pending')) throw new Error('manual');
         const progress = Number(card.querySelector('.ScrobbleCard__progress-value')?.textContent.replace('%', '').trim());
         if (!Number.isFinite(progress) || progress < request.threshold) throw new Error('progress');
@@ -72,6 +87,15 @@
     }
     async function verify(request) {
         await ready(); ensureAccount(request.account);
+        if (request.kind === 'movie') {
+            if (!Number.isSafeInteger(request.movieId) || request.movieId <= 0 || location.pathname !== `/movie/${request.movieId}/`) throw new Error('page');
+            const options = [...document.querySelectorAll('.MovieDetails .StatusBar__option')];
+            const watched = options.filter(option => option.textContent.trim() === 'Посмотрел');
+            const selected = options.filter(option => option.classList.contains('StatusBar__option--active'));
+            if (watched.length !== 1 || selected.length !== 1) throw new Error('layout');
+            return { watched: selected[0] === watched[0] };
+        }
+        if (request.kind !== undefined && request.kind !== 'episode') throw new Error('page');
         if (location.pathname !== `/view/episode/${request.episodeId}/`) throw new Error('page');
         const checks = document.querySelectorAll('.EpisodeDetails__watch-label.WatchCheckbox');
         if (checks.length !== 1) throw new Error('layout');

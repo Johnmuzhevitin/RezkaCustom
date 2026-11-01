@@ -9,8 +9,22 @@
     const text = selector => document.querySelector(selector)?.textContent.trim() || '';
     function identity() {
         const active = document.querySelector('.b-simple_episode__item.active');
-        const id = Number(location.pathname.match(/\/(\d+)-[^/]+\.html$/)?.[1]);
-        if (!active || Number(active.dataset.id) !== id) return null;
+        const id = Number(location.pathname.match(/^\/(?:films|series|cartoons|animation|show)\/[^/]+\/(\d+)-[^/]+\.html$/)?.[1]);
+        if (!id) return null;
+        let identity;
+        if (active) {
+            if (Number(active.dataset.id) !== id) return null;
+            identity = { season: Number(active.dataset.season_id), number: Number(active.dataset.episode_id) };
+        } else {
+            // An absent episode selection alone does not make a page a film.
+            // Require the native movie initializer for this exact title; never execute page scripts.
+            if (document.querySelector('.b-simple_episode__item, .b-simple_season__item')) return null;
+            const kinds = new Set([...document.querySelectorAll('script:not([src])')].flatMap(script =>
+                [...script.textContent.matchAll(/sof\.tv\.initCDN(Movies|Series)Events\(\s*(\d+)\s*,/g)]
+                    .filter(match => Number(match[2]) === id).map(match => match[1])));
+            if (kinds.size !== 1 || !kinds.has('Movies')) return null;
+            identity = { kind: 'movie' };
+        }
         let imdb = '';
         for (const link of document.querySelectorAll('.b-post__info a, .b-post__rating a')) {
             try {
@@ -22,7 +36,7 @@
             } catch { /* An unrelated or malformed external link is not an identifier. */ }
         }
         const yearLink = document.querySelector('.b-post__info a[href*="/year/"]');
-        return M.validEpisode({ rezkaId: id, season: Number(active.dataset.season_id), number: Number(active.dataset.episode_id),
+        return M.validMedia({ rezkaId: id, ...identity,
             title: text('.b-post__title h1') || text('h1'), originalTitle: text('.b-post__origtitle').split(' / ')[0],
             imdb, year: Number(yearLink?.textContent.match(/\d{4}/)?.[0]) });
     }
@@ -64,7 +78,7 @@
         if (!video || !episode || !Number.isFinite(video.duration) || video.duration < 60 || video.duration > 43200) { reset(); return; }
         if (lastDuration && Math.abs(lastDuration - video.duration) > 5) reset();
         lastDuration = video.duration;
-        const key = M.episodeKey(episode);
+        const key = M.mediaKey(episode);
         if (key !== lastKey) {
             waitingSource = lastKey && video.currentSrc === lastSource ? lastSource : null;
             reset(); lastKey = key;
@@ -106,7 +120,7 @@
     }
     function playbackSnapshot(episode) {
         if (!episode || !config.enabled || stopped) return null;
-        const key = M.episodeKey(episode);
+        const key = M.mediaKey(episode);
         const selectedVideo = document.querySelector('#cdnplayer video, #player video, video');
         if (!video || video !== selectedVideo || lastKey !== key || finished.has(config.account + ':' + key)
             || waitingSource !== null || !previous || previous.key !== key + ':' + generation

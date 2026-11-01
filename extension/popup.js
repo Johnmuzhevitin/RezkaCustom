@@ -320,7 +320,7 @@ function render() {
 function selectSection(next, focus = false) {
     section = next;
     $('#search-input').value = '';
-    $('#search-input').placeholder = next === 'myshows' ? 'Найти сериал во всём журнале' : 'Найти настройку';
+    $('#search-input').placeholder = next === 'myshows' ? 'Найти фильм или сериал в журнале' : 'Найти настройку';
     $('#search-input').setAttribute('aria-label', $('#search-input').placeholder);
     for (const button of document.querySelectorAll('[role="tab"]')) {
         const selected = button.dataset.section === next;

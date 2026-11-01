@@ -45,24 +45,34 @@ const RezkaMyShows = (() => {
         seconds = Math.min(positionDelay, seconds + Math.min(elapsed, delta / rate));
         return { seconds, position: seconds >= positionDelay ? current.time : 0 };
     }
-    function validEpisode(input) {
+    function isMovie(media) { return media?.kind === 'movie'; }
+    // Keep the stored `episode` container and old episode keys compatible with existing journals.
+    // Movies are explicitly tagged and have their own key namespace, never a fake S00E00.
+    function validMedia(input) {
         if (!input || !Number.isSafeInteger(input.rezkaId) || input.rezkaId <= 0
-            || !Number.isInteger(input.season) || input.season < 0 || input.season > 999
-            || !Number.isInteger(input.number) || input.number < 1 || input.number > 9999
+            || (input.kind !== undefined && !['movie', 'episode'].includes(input.kind))
             || typeof input.title !== 'string' || !input.title.trim() || input.title.length > 300) return null;
-        return { rezkaId: input.rezkaId, season: input.season, number: input.number, title: input.title.trim(),
+        if (isMovie(input) ? input.season !== undefined || input.number !== undefined
+            : !Number.isInteger(input.season) || input.season < 0 || input.season > 999
+                || !Number.isInteger(input.number) || input.number < 1 || input.number > 9999) return null;
+        return { rezkaId: input.rezkaId, ...(isMovie(input) ? { kind: 'movie' } : { season: input.season, number: input.number }), title: input.title.trim(),
             originalTitle: typeof input.originalTitle === 'string' ? input.originalTitle.trim().slice(0, 300) : '',
             imdb: /^tt\d{5,12}$/.test(input.imdb) ? input.imdb : '',
             year: Number.isInteger(input.year) && input.year >= 1900 && input.year <= 2200 ? input.year : undefined };
     }
-    function episodeKey(ep) { return `${ep.rezkaId}:${ep.season}:${ep.number}`; }
+    function mediaKey(media) { return isMovie(media) ? `movie:${media.rezkaId}` : `${media.rezkaId}:${media.season}:${media.number}`; }
+    function remoteId(entry) { return isMovie(entry?.episode) ? entry?.movieId : entry?.episodeId; }
+    function watchUrl(entry) {
+        const id = remoteId(entry);
+        return Number.isSafeInteger(id) && id > 0 ? `https://myshows.me/${isMovie(entry.episode) ? 'movie' : 'view/episode'}/${id}/` : historyUrl;
+    }
     function sourceFor(id) {
         if (!/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(id)) throw new Error('Invalid entry identifier');
         // Keep every UUID bit, but fit inside the 29-character length already accepted by MyShows.
         const bytes = id.replaceAll('-', '').match(/../g).map(value => parseInt(value, 16));
         return 'Rezka-' + btoa(String.fromCharCode(...bytes)).replaceAll('+', '-').replaceAll('/', '_').replace(/=+$/, '');
     }
-    function label(ep) { return `S${String(ep.season).padStart(2, '0')}E${String(ep.number).padStart(2, '0')}`; }
+    function label(ep) { return isMovie(ep) ? 'Фильм' : `S${String(ep.season).padStart(2, '0')}E${String(ep.number).padStart(2, '0')}`; }
     function canForce(entry) {
         return !entry || (!entry.submittedAt && !entry.manualPending && ['watching', 'queued', 'attention', 'cancelled'].includes(entry.status));
     }
@@ -72,7 +82,8 @@ const RezkaMyShows = (() => {
         const show = { title: entry.episode.originalTitle || entry.episode.title, ids: { imdb: entry.episode.imdb } };
         if (entry.episode.year) show.year = entry.episode.year;
         return { progress: entry.manualAt ? 100 : Math.min(100, Math.ceil(entry.progress * 10) / 10), source_app: entry.source,
-            app_version: version, show, episode: { season: entry.episode.season, number: entry.episode.number } };
+            app_version: version, ...(isMovie(entry.episode) ? { movie: show }
+                : { show, episode: { season: entry.episode.season, number: entry.episode.number } }) };
     }
     function transition(entry, status, reason = '', now = Date.now()) {
         if (entry.status !== status || entry.reason !== reason) {
@@ -81,5 +92,5 @@ const RezkaMyShows = (() => {
         entry.status = status; entry.reason = reason; entry.updatedAt = now;
         return entry;
     }
-    return { key, historyUrl, positionDelay, terminal, active, initial, mergeRanges, percent, interval, advancePosition, validEpisode, episodeKey, sourceFor, label, canForce, canCancel, canResume, payload, transition };
+    return { key, historyUrl, positionDelay, terminal, active, initial, mergeRanges, percent, interval, advancePosition, isMovie, validMedia, mediaKey, remoteId, watchUrl, sourceFor, label, canForce, canCancel, canResume, payload, transition };
 })();

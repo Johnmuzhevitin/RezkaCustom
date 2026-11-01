@@ -37,9 +37,9 @@ const RezkaDiagnostics = (() => {
         const latestState = (await chrome.storage.local.get(RezkaMyShows.key))[RezkaMyShows.key] || RezkaMyShows.initial();
         const stable = supported && latestTab?.url === tab.url && latestState.account === state.account
             && latestState.enabled === state.enabled && latestState.connection === state.connection;
-        const episode = stable ? RezkaMyShows.validEpisode(player?.episode) : null;
+        const episode = stable ? RezkaMyShows.validMedia(player?.episode) : null;
         const matchingEpisode = episode && episode.rezkaId === Number(new URL(tab.url).pathname.match(/\/(\d+)-[^/]+\.html$/)?.[1]);
-        const key = matchingEpisode ? RezkaMyShows.episodeKey(episode) : null;
+        const key = matchingEpisode ? RezkaMyShows.mediaKey(episode) : null;
         const entry = key ? entries.find(entry => entry.key === key) : null;
         const telemetry = player?.playback;
         const playback = stable && player?.build === REZKA_BUILD.id && state.enabled && state.connection === 'connected'

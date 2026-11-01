@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Rezka Custom",
-  "version": "0.6.7",
+  "version": "0.7.0",
   "description": "HDrezka: оформление, плеер, настройки и отдельная страница поиска с фильтрами.",
   "minimum_chrome_version": "116",
   "permissions": ["storage", "declarativeNetRequestWithHostAccess", "sidePanel", "alarms"],
@@ -39,7 +39,7 @@
       "world": "ISOLATED"
     },
     {
-      "matches": ["https://myshows.me/profile/watch-history/*", "https://myshows.me/view/episode/*"],
+      "matches": ["https://myshows.me/profile/watch-history/*", "https://myshows.me/view/episode/*", "https://myshows.me/movie/*"],
       "js": ["myshows-site.js"],
       "run_at": "document_idle",
       "all_frames": false,
