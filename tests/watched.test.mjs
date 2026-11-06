@@ -10,6 +10,8 @@ const url = id => `/films/fiction/${id}-example-2026.html`;
 const card = id => `<div class="b-content__inline_item" data-id="${id}"><a href="${url(id)}"><img alt=""></a><div class="b-content__inline_item-link"><a href="${url(id)}">Title ${id}</a></div></div>`;
 const row = (id, watched = true) => `<div id="save-${id}" class="b-videosaves__list_item ${watched ? 'watched-row' : ''}"><div class="date">01-11-2026</div><div class="title"><a href="${url(id)}">Title ${id}</a></div><div class="info">Studio</div><div class="controls"><a class="view ${watched ? 'watched' : ''}" data-id="${100 + Number(id)}" href="javascript:void(0)"></a></div></div>`;
 const history = (rows = row(1) + row(2, false), pagination = '') => `<div id="videosaves-list">${rows}</div>${pagination}`;
+// Native franchise markup observed in installed Chrome; current titles have no URL.
+const part = (id, current = false) => `<div id="part-${id}" class="b-post__partcontent_item${current ? ' current' : ''}"${current ? '' : ` data-url="${url(id)}"`}><div class="td num">${id}</div><div class="td title">${current ? `Title ${id}` : `<a href="${url(id)}">Title ${id}</a>`}</div><div class="td year">2026 год</div><div class="td rating"><i>7.00</i></div></div>`;
 
 async function harness(t, { markup = card(1) + card(2), path = '/', enabled, fetcher,
     signedIn = true, get, echoWrites = false } = {}) {
@@ -40,6 +42,65 @@ async function harness(t, { markup = card(1) + card(2), path = '/', enabled, fet
         invalidate: () => changed({ 'ui:watched-revision': { newValue: 'changed' } }, 'local') };
 }
 
+test('unrelated player text and filter options do not rescan catalogue or shadow results', async t => {
+    const h = await harness(t, { markup: '<div id="clock"></div><ul id="options"></ul>' + card(1) + card(2) });
+    const host = h.doc.createElement('section'); h.doc.body.append(host);
+    const root = host.attachShadow({ mode: 'open' }); h.w.watchedFeature.registerRoot(root);
+    root.innerHTML = '<p id="status"></p><ul id="choices"></ul><article class="card"><a href="' + url(2) + '">Result</a></article>';
+    await settle(); await settle();
+    const focused = h.doc.querySelector('.rc-watch-toggle'); focused.focus();
+    let writes = 0;
+    const observer = new h.w.MutationObserver(records => { writes += records.length; });
+    for (const target of [h.doc, root]) observer.observe(target, { subtree: true, attributes: true, attributeFilter: ['aria-busy'] });
+    t.after(() => observer.disconnect());
+    for (let i = 0; i < 3; i++) {
+        h.doc.querySelector('#clock').textContent = '00:0' + i;
+        h.doc.querySelector('#options').innerHTML = '<li>Voice ' + i + '</li>';
+        root.querySelector('#status').textContent = 'Checked: ' + i;
+        root.querySelector('#choices').innerHTML = '<li>Country ' + i + '</li>';
+        await settle();
+    }
+    assert.equal(writes, 0, 'unrelated DOM churn must not update every watched action');
+    assert.equal(h.doc.activeElement, focused);
+    assert.equal(h.calls.length, 1, 'UI edits must not request history');
+    const result = h.doc.createElement('article'); result.className = 'card';
+    result.innerHTML = '<a href="' + url(1) + '">New result</a>';
+    root.append(result); await settle();
+    assert.ok(result.classList.contains('rc-watched'));
+    assert.equal(result.querySelector('.rc-watch-toggle').getAttribute('aria-pressed'), 'true');
+});
+
+test('native replacements restore watched controls and accessible watching descriptions', async t => {
+    const h = await harness(t); await settle(); await settle();
+    const watching = h.doc.querySelector('[data-id="2"]');
+    watching.querySelector('.rc-watch-toggle').remove();
+    watching.querySelector('.rc-watching-status').remove();
+    h.doc.querySelector('.rc-watching-filter').remove();
+    await settle();
+    assert.equal(watching.querySelectorAll('.rc-watch-toggle').length, 1);
+    const label = watching.querySelector('.rc-watching-status');
+    assert.ok(label?.isConnected);
+    assert.equal(watching.querySelector('a').getAttribute('aria-describedby'), label.id);
+    assert.equal(h.doc.querySelectorAll('#rc-watching-bronze').length, 1);
+    watching.querySelector('.b-content__inline_item-link').innerHTML = '<a href="' + url(2) + '">Replacement title</a>';
+    await settle();
+    assert.equal(watching.querySelector('.b-content__inline_item-link a').getAttribute('aria-describedby'), label.id);
+});
+
+test('subtree replacement handles history controls, late links and signed-out cleanup', async t => {
+    const h = await harness(t, { path: '/continue/', markup: history(row(2, false)) + card(2) });
+    h.doc.querySelector('#save-2 .controls').innerHTML = '<span class="view watched"></span>';
+    await settle();
+    assert.ok(h.doc.querySelector('[data-id="2"].rc-watched'));
+    h.doc.querySelector('.rc-history-tabs').remove(); await settle();
+    assert.equal(h.doc.querySelectorAll('.rc-history-tabs').length, 1);
+    const wrapper = h.doc.createElement('div'); wrapper.innerHTML = '<section><a href="' + url(2) + '">Late link</a></section>';
+    h.doc.body.append(wrapper); await settle();
+    assert.ok(wrapper.querySelector('a.rc-watched'));
+    h.doc.querySelector('.b-tophead__contwatch').remove(); await settle();
+    assert.equal(h.doc.querySelector('.rc-watch-toggle'), null);
+});
+
 test('only explicit watched marks dim cards, duplicate appearances, sidebar links and detail headings', async t => {
     const h = await harness(t, { path: url(1), markup: card(1) + card(2) + card(1)
         + `<li class="b-seriesupdate__block_list_item"><a href="${url(1)}">Update</a></li>`
@@ -57,6 +118,77 @@ test('only explicit watched marks dim cards, duplicate appearances, sidebar link
     assert.equal(h.calls[0].options.credentials, 'same-origin');
     assert.equal(h.calls[0].options.redirect, 'error');
     assert.deepEqual(h.writes, [], 'viewing history is not persisted');
+});
+
+test('saved incomplete titles have a distinct poster state; absent and completed titles stay separate', async t => {
+    const h = await harness(t, { markup: card(1) + card(2) + card(3) });
+    const watching = h.doc.querySelector('[data-id="2"]');
+    assert.ok(watching.classList.contains('rc-watching'));
+    assert.equal(watching.classList.contains('rc-watched'), false);
+    assert.equal(h.doc.querySelector('[data-id="1"]').classList.contains('rc-watching'), false);
+    assert.equal(h.doc.querySelector('[data-id="3"]').classList.contains('rc-watching'), false);
+    assert.equal(watching.querySelectorAll('img').length, 1, 'do not duplicate or wrap the native poster');
+    const description = watching.querySelector('.rc-watching-status');
+    assert.equal(description.textContent, 'Смотрю');
+    for (const link of watching.querySelectorAll('a')) assert.equal(link.getAttribute('aria-describedby'), description.id);
+    assert.equal(h.doc.querySelectorAll('#rc-watching-bronze').length, 1);
+    assert.equal(h.calls.length, 1, 'reuse the existing history request');
+    assert.deepEqual(h.writes, []);
+    h.change(false);
+    assert.equal(h.doc.querySelector('.rc-watching, .rc-watching-status'), null);
+    assert.equal(watching.querySelector('a').hasAttribute('aria-describedby'), false);
+    h.change(true); await tick(); await tick();
+    assert.ok(watching.classList.contains('rc-watching'));
+});
+
+test('watching state follows history updates and deletion while failed refreshes preserve known state', async t => {
+    let response = history(row(2, false)), fail = false;
+    const h = await harness(t, { markup: card(2), fetcher: () => {
+        if (fail) throw new Error('offline');
+        return response;
+    } });
+    const target = h.doc.querySelector('[data-id="2"]');
+    assert.ok(target.classList.contains('rc-watching'));
+    fail = true; h.invalidate(); await settle();
+    assert.ok(target.classList.contains('rc-watching'));
+    fail = false; response = history(row(2)); h.invalidate(); await settle();
+    assert.ok(target.classList.contains('rc-watched'));
+    assert.equal(target.classList.contains('rc-watching'), false);
+    response = history(row(2, false)); h.invalidate(); await settle();
+    assert.ok(target.classList.contains('rc-watching'));
+    response = history(''); h.invalidate(); await settle();
+    assert.equal(target.classList.contains('rc-watching'), false);
+    assert.equal(target.classList.contains('rc-watched'), false);
+});
+
+test('dynamic shadow results own their filter and preserve existing accessible descriptions', async t => {
+    const h = await harness(t);
+    const host = h.doc.createElement('section'); h.doc.body.append(host);
+    const root = host.attachShadow({ mode: 'open' }); h.w.watchedFeature.registerRoot(root);
+    const markup = `<p id="metadata">Existing metadata</p><article class="card"><a href="${url(2)}" aria-describedby="metadata"><img alt="Title"></a></article>`;
+    root.innerHTML = markup; await settle(); await settle();
+    let link = root.querySelector('a');
+    const label = root.querySelector('.rc-watching-status');
+    assert.ok(root.querySelector('article.rc-watching'));
+    assert.equal(link.getAttribute('aria-describedby'), 'metadata ' + label.id);
+    assert.equal(root.querySelectorAll('#rc-watching-bronze').length, 1);
+    h.change(false);
+    assert.equal(link.getAttribute('aria-describedby'), 'metadata');
+    h.change(true); await settle();
+    root.innerHTML = markup; await settle(); await settle();
+    assert.equal(root.querySelectorAll('#rc-watching-bronze').length, 1);
+    assert.equal(root.querySelectorAll('.rc-watching-status').length, 1);
+    link = root.querySelector('a'); link.setAttribute('href', url(3)); await settle();
+    assert.equal(root.querySelector('.rc-watching'), null, 'a recycled result must lose its previous title state');
+    assert.equal(link.getAttribute('aria-describedby'), 'metadata');
+});
+
+test('removing an incomplete native history entry restores its catalogue card', async t => {
+    const h = await harness(t, { path: '/continue/', markup: history(row(2, false)) + card(2) });
+    assert.ok(h.doc.querySelector('[data-id="2"].rc-watching'));
+    h.doc.querySelector('#save-2').remove(); await settle();
+    assert.equal(h.doc.querySelector('.rc-watching'), null);
+    assert.equal(h.doc.querySelector('.rc-watching-status'), null);
 });
 
 test('late catalogue content and shadow-root search results share the watched state', async t => {
@@ -266,6 +398,84 @@ test('compact controls are independent buttons and stay single on dynamic and sh
     assert.equal(root.querySelector('.rc-watched'), null);
 });
 
+test('franchise rows include the current non-link title and keep native cells outside the action', async t => {
+    const h = await harness(t, { path: url(1), markup: '<div class="b-post__partcontent">'
+        + part(1, true) + part(2) + '</div>' });
+    const current = h.doc.querySelector('#part-1'), other = h.doc.querySelector('#part-2');
+    assert.equal(h.doc.querySelectorAll('.rc-watch-cell > button.rc-watch-toggle').length, 2);
+    assert.equal(h.doc.querySelector('a button'), null);
+    assert.equal(current.querySelector('a'), null, 'the native current title remains plain text');
+    assert.deepEqual([...current.children].slice(0, 4).map(cell => cell.textContent), ['1', 'Title 1', '2026 год', '7.00']);
+    assert.equal(current.querySelector('button').getAttribute('aria-pressed'), 'true');
+    assert.equal(other.querySelector('button').getAttribute('aria-pressed'), 'false');
+    assert.ok(current.classList.contains('rc-watched'));
+    assert.equal(current.querySelector('.rc-watched'), null, 'never compound row and link opacity');
+    assert.equal(h.w.getComputedStyle(current).opacity, '1');
+    assert.equal(h.w.getComputedStyle(current.querySelector('.title')).opacity, '0.1');
+    assert.notEqual(h.w.getComputedStyle(current.querySelector('.rc-watch-cell')).opacity, '0.1');
+    assert.equal(h.w.getComputedStyle(current.querySelector('button')).pointerEvents, 'auto');
+    h.change(false); await settle();
+    assert.equal(h.doc.querySelector('.rc-watched'), null);
+    assert.equal(h.doc.querySelectorAll('.rc-watch-toggle').length, 2, 'dimming does not disable actions');
+    assert.deepEqual(h.writes, []);
+});
+
+test('franchise marks and unmarks sync every copy without opening the row, including the current title', async t => {
+    for (const current of [false, true]) {
+        let marked = false, finish, navigations = 0;
+        const h = await harness(t, { path: url(2), markup: part(2, current) + card(2), fetcher: async (target, options) => {
+            if (options.method === 'POST') {
+                assert.equal(target, 'https://rezka.fi/engine/ajax/cdn_saves_view.php');
+                assert.equal(options.body, 'id=102');
+                await new Promise(resolve => { finish = resolve; });
+                marked = !marked;
+                return '{"success":true}';
+            }
+            return history(row(2, marked));
+        } });
+        const target = h.doc.querySelector('#part-2'), button = target.querySelector('button');
+        const duplicate = h.doc.querySelector('.b-content__inline_item button');
+        target.addEventListener('click', () => navigations++);
+        button.click(); duplicate.click(); await tick(); await tick();
+        assert.equal(navigations, 0, 'stop the site full-row click handler');
+        assert.equal(h.calls.filter(call => call.options.method === 'POST').length, 1);
+        assert.equal(button.getAttribute('aria-busy'), 'true');
+        assert.equal(button.getAttribute('aria-pressed'), 'false', 'wait for confirmed history');
+        finish(); await settle();
+        assert.equal(button.getAttribute('aria-pressed'), 'true');
+        assert.equal(duplicate.getAttribute('aria-pressed'), 'true');
+        assert.equal(h.doc.querySelectorAll('.rc-watched').length, 2);
+        assert.equal(h.doc.querySelector('#part-2 .rc-watched'), null);
+        button.click(); await tick(); await tick(); finish(); await settle();
+        assert.equal(navigations, 0);
+        assert.equal(button.getAttribute('aria-pressed'), 'false');
+        assert.equal(duplicate.getAttribute('aria-pressed'), 'false');
+        assert.equal(h.doc.querySelector('.rc-watched'), null);
+    }
+});
+
+test('dynamic franchise rows follow URL and current-title changes and remove controls for guests or invalid targets', async t => {
+    const h = await harness(t, { path: url(1), markup: '<div class="b-post__partcontent"></div>' });
+    const list = h.doc.querySelector('.b-post__partcontent');
+    list.innerHTML = part(1) + part(2); await settle(); await settle();
+    assert.equal(list.querySelectorAll('button').length, 2, 'one action per dynamically inserted row');
+    const target = list.querySelector('#part-1');
+    target.querySelector('.title').textContent = 'Plain title';
+    target.setAttribute('data-url', url(2)); await settle();
+    assert.equal(target.querySelector('button').getAttribute('aria-pressed'), 'false');
+    assert.equal(target.classList.contains('rc-watched'), false);
+    target.setAttribute('data-url', 'https://example.com' + url(1)); await settle();
+    assert.equal(target.querySelector('.rc-watch-cell'), null);
+    target.removeAttribute('data-url'); await settle();
+    target.classList.add('current'); await settle();
+    assert.equal(target.querySelector('button').getAttribute('aria-pressed'), 'true');
+    target.classList.remove('current'); await settle();
+    assert.equal(target.querySelector('.rc-watch-cell'), null);
+    h.doc.querySelector('.b-tophead__contwatch').remove(); await settle();
+    assert.equal(list.querySelector('.rc-watch-cell, .rc-watched-part'), null);
+    assert.deepEqual(h.writes, [], 'DOM changes never alter account marks');
+});
+
 test('card actions wait for confirmation, prevent duplicate clicks and update every copy', async t => {
     let value = false, finish;
     const h = await harness(t, { markup: card(2) + card(2), fetcher: async (target, options) => {
@@ -280,16 +490,19 @@ test('card actions wait for confirmation, prevent duplicate clicks and update ev
     } });
     const buttons = h.doc.querySelectorAll('.rc-watch-toggle');
     buttons[0].click(); buttons[1].click(); await tick(); await tick();
+    assert.equal(h.doc.querySelectorAll('.rc-watching').length, 2, 'retain the confirmed incomplete state while saving');
     assert.equal(h.calls.filter(c => c.options.method === 'POST').length, 1);
     assert.equal(buttons[0].getAttribute('aria-busy'), 'true');
     assert.equal(h.doc.querySelector('.rc-watched'), null, 'no false success before server confirmation');
     finish(); await settle();
     assert.equal(h.doc.querySelectorAll('.rc-watched').length, 2);
+    assert.equal(h.doc.querySelector('.rc-watching'), null);
     assert.equal(buttons[1].getAttribute('aria-pressed'), 'true');
     assert.equal(buttons[0].getAttribute('aria-busy'), 'false');
     assert.ok(h.writes.some(item => Object.hasOwn(item, 'ui:watched-revision')));
     buttons[1].click(); await tick(); await tick(); finish(); await settle();
     assert.equal(h.doc.querySelector('.rc-watched'), null);
+    assert.equal(h.doc.querySelectorAll('.rc-watching').length, 2, 'unmarking retains saved history and resumes watching');
     assert.equal(buttons[0].getAttribute('aria-pressed'), 'false');
 });
 

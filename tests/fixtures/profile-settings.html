@@ -1,0 +1,15 @@
+<!-- Minimal structure observed in native profile settings; all values are synthetic. -->
+<form id="userinfo" method="post" action="/settings/personality/">
+  <div class="b-content__htitle"><h1>Настройки профиля</h1></div>
+  <ul class="b-tabs__main">
+    <li class="b-tabs__main_item"><a class="b-tabs__main_link" href="/settings/">Основные</a></li>
+    <li class="b-tabs__main_item"><a class="b-tabs__main_link" href="/settings/security/">Безопасность</a></li>
+    <li class="b-tabs__main_item"><a class="b-tabs__main_link active" aria-current="page" href="/settings/personality/">Настройки сайта и плеера</a></li>
+    <li class="b-tabs__main_item"><a class="b-tabs__main_link" href="/settings/promotion/">Premium</a></li>
+  </ul>
+  <div class="b-content__inline">
+    <label><input type="checkbox" name="cdn_autoswitch" checked>Автопереключение серий</label>
+    <button type="submit">Сохранить</button>
+  </div>
+  <input type="hidden" name="profile_action" value="synthetic">
+</form>

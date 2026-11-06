@@ -1,0 +1,48 @@
+/* Match the existing search continuation control in both site themes. */
+.rc-pages-native[hidden] { display: none !important; }
+.rc-catalogue-pages {
+    --rc-pages-accent: #315b86;
+    --rc-pages-hover: #244565;
+    --rc-pages-on-accent: #fff;
+    --rc-pages-muted: #53616a;
+    --rc-pages-error: #9d2820;
+    grid-column: 1 / -1;
+    clear: both;
+    width: 100%;
+    box-sizing: border-box;
+    padding: 24px 0;
+    text-align: center;
+    overflow-anchor: none;
+}
+.b-theme__template__night .rc-catalogue-pages {
+    --rc-pages-accent: #a7cce6;
+    --rc-pages-hover: #c3e0f2;
+    --rc-pages-on-accent: #102530;
+    --rc-pages-muted: #a6b7bf;
+    --rc-pages-error: #ffb8b1;
+}
+.rc-catalogue-pages > button {
+    min-height: 44px;
+    padding: 9px 16px;
+    border: 1px solid var(--rc-pages-accent);
+    border-radius: 6px;
+    background: var(--rc-pages-accent);
+    color: var(--rc-pages-on-accent);
+    font: inherit;
+    font-size: 16px;
+    font-weight: 600;
+    line-height: 1.5;
+    cursor: pointer;
+}
+.rc-catalogue-pages > button:hover:not([aria-disabled="true"]) {
+    background: var(--rc-pages-hover);
+    border-color: var(--rc-pages-hover);
+}
+.rc-catalogue-pages > button:focus-visible {
+    outline: 2px solid var(--rc-pages-accent);
+    outline-offset: 3px;
+}
+.rc-catalogue-pages > button[aria-disabled="true"] { opacity: .65; cursor: default; }
+.rc-catalogue-pages .rc-pages-status { margin: 8px 0 0; color: var(--rc-pages-muted); font-size: 14px; line-height: 1.5; }
+.rc-catalogue-pages .rc-pages-status:empty { display: none; }
+.rc-catalogue-pages.rc-pages-error .rc-pages-status { color: var(--rc-pages-error); }

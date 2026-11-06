@@ -127,13 +127,12 @@ test('HTTP mirrors can use the player bridge without secure-context-only APIs', 
     expect(errors).toEqual([]);
 });
 
-test('IMDb ratings, country filter and collapsed blocks remain functional', async () => {
+test('IMDb ratings, country filter and collapsed comments remain functional', async () => {
     const popup = await openMenu();
     await popup.getByRole('switch', { name: 'Рейтинги IMDb' }).check();
     await expect(page.locator('.rating-value b')).toHaveText(['8.4', '8.4']);
     await expect(page.locator('[data-id="43"]')).toHaveClass(/r4-content-russian/);
-    await page.locator('.r4-hide-info-button').click();
-    await expect(page.locator('body')).toHaveClass(/r4-hide-info/);
+    await expect(page.locator('.r4-hide-info-button')).toHaveCount(0);
     await page.locator('.r4-comments-title').click();
     await expect(page.locator('body')).toHaveClass(/r4-comments-hide/);
     expect(errors).toEqual([]);
@@ -214,14 +213,15 @@ test('native side panel follows the active tab, keeps settings and stays open af
     await expect(second.locator('body')).toHaveClass(/r4-content-size-ultrawide/);
     await page.evaluate(() => { window.reloadSentinel = true; });
     await second.evaluate(() => { window.reloadSentinel = true; });
-    for (const index of [1, 0]) {
-        await inspector.evaluate(index => {
+    for (const checked of [true, false]) {
+        await inspector.evaluate(checked => {
             const doc = chrome.extension.getViews().find(view => view.location.pathname === '/popup.html').document;
-            doc.getElementById('tab-player').click();
-            doc.querySelector(`[data-setting="player-scale"][data-index="${index}"]`).click();
-        }, index);
+            doc.getElementById('tab-view').click();
+            const control = doc.querySelector('[data-setting="theme-color-black"]');
+            if (control.checked !== checked) control.click();
+        }, checked);
         // Reverting this setting deliberately waits for an explicit reload.
-        await expect(second.locator('#oframecdnplayer')).toHaveCSS('transform', 'matrix(1.5, 0, 0, 1.5, 0, 0)');
+        await expect(second.locator('meta[name="theme-color"]')).toHaveAttribute('content', 'black');
     }
     await expect.poll(state).toMatchObject({ reload: true });
     await Promise.all([second.waitForEvent('domcontentloaded'), inspector.evaluate(() => {
@@ -229,7 +229,7 @@ test('native side panel follows the active tab, keeps settings and stays open af
     })]);
     await expect.poll(state).toMatchObject({ label: 'hdrezka.ag · подключено', reload: false });
     expect(await second.evaluate(() => window.reloadSentinel)).toBeUndefined();
-    await expect(second.locator('#oframecdnplayer')).toHaveCSS('transform', 'matrix(1, 0, 0, 1, 0, 0)');
+    await expect(second.locator('meta[name="theme-color"]')).toHaveCount(0);
     expect(await page.evaluate(() => window.reloadSentinel)).toBe(true);
     expect(errors).toEqual([]);
 });
@@ -266,18 +266,18 @@ test('search, keyboard navigation, offline editing and responsive panel width wo
 
 test('reload-only changes preserve playback until requested and retain pending state on reopen', async () => {
     let popup = await openMenu();
-    await popup.getByRole('tab', { name: 'Плеер', exact: true }).click();
-    await popup.getByRole('radio', { name: '1.5x', exact: true }).click();
-    await expect(page.locator('#oframecdnplayer')).toHaveCSS('transform', 'matrix(1.5, 0, 0, 1.5, 0, 0)');
+    await popup.getByRole('tab', { name: 'Вид', exact: true }).click();
+    await popup.getByRole('switch', { name: 'Чёрная панель браузера' }).check();
+    await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute('content', 'black');
     await page.evaluate(() => { window.reloadSentinel = true; });
-    await popup.getByRole('radio', { name: '1x', exact: true }).click();
+    await popup.getByRole('switch', { name: 'Чёрная панель браузера' }).uncheck();
     await expect(popup.getByRole('button', { name: 'Обновить страницу' })).toBeVisible();
     expect(await page.evaluate(() => window.reloadSentinel)).toBe(true);
     await popup.close(); popup = await openMenu();
     await expect(popup.getByRole('button', { name: 'Обновить страницу' })).toBeVisible();
     await Promise.all([page.waitForEvent('domcontentloaded'), popup.getByRole('button', { name: 'Обновить страницу' }).click()]);
     expect(await page.evaluate(() => window.reloadSentinel)).toBeUndefined();
-    await expect(page.locator('#oframecdnplayer')).toHaveCSS('transform', 'matrix(1, 0, 0, 1, 0, 0)');
+    await expect(page.locator('meta[name="theme-color"]')).toHaveCount(0);
     expect(errors).toEqual([]);
 });
 

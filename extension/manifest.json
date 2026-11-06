@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Rezka Custom",
-  "version": "0.7.2",
+  "version": "0.12.2",
   "description": "HDrezka: оформление, плеер, настройки и отдельная страница поиска с фильтрами.",
   "minimum_chrome_version": "116",
   "permissions": ["storage", "declarativeNetRequestWithHostAccess", "sidePanel", "alarms"],
@@ -15,7 +15,7 @@
       "matches": ["http://*/*", "https://*/*"],
       "include_globs": ["http*://*rezka*/*", "http*://rezkify.com/*", "http*://rezkery.com/*", "http*://kinopub.me/*"],
       "exclude_matches": ["*://*.home/*", "*://*.local/*"],
-      "js": ["player-quality.js", "page-bridge.js"],
+      "js": ["player-quality.js", "page-bridge.js", "voice-switch.js"],
       "run_at": "document_start",
       "all_frames": true,
       "world": "MAIN"
@@ -33,7 +33,8 @@
       "matches": ["http://*/*", "https://*/*"],
       "include_globs": ["http*://*rezka*/*", "http*://rezkify.com/*", "http*://rezkery.com/*", "http*://kinopub.me/*"],
       "exclude_matches": ["*://*.home/*", "*://*.local/*"],
-      "js": ["search-core.js", "search-style.js", "watched-site.js", "watched.js", "search-page.js", "myshows-core.js", "myshows-tracker.js"],
+      "js": ["search-rules.js", "search-core.js", "search-store.js", "search-editor.js", "search-style.js", "watched-site.js", "exclusions.js", "watched.js", "exclusions-site.js", "exclusions-profile.js", "search-page.js", "catalogue-pages.js", "myshows-core.js", "myshows-tracker.js", "voice-menu.js"],
+      "css": ["voice-menu.css", "catalogue-pages.css"],
       "run_at": "document_end",
       "all_frames": false,
       "world": "ISOLATED"

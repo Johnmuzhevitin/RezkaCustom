@@ -73,9 +73,7 @@
 .myshows-state[data-status="attention"] { color:var(--error-ink); }
 .myshows-state[data-status="cancelled"], .myshows-state[data-status="reset"] { color:var(--muted); }
 .myshows-entry .myshows-description { margin:4px 0; }
-.myshows-entry .myshows-actions { margin-top:2px; column-gap:16px; }
-.myshows-entry .text-button { min-height:36px; padding:6px 0; font-size:var(--text-small); }
-.myshows-entry [data-myshows-action$="-cancel"] { color:var(--muted); }
+.myshows-entry [data-myshows-action$="-remove"]:hover { color:var(--error-ink); background:var(--error-surface); }
 .myshows-link { display:inline-flex; align-items:center; min-height:40px; color:var(--accent); font-size:var(--text-small); text-decoration:none; text-underline-offset:3px; overflow-wrap:anywhere; }
 .myshows-link:hover { color:var(--accent-hover); text-decoration:underline; }
 .myshows-list ~ .myshows-link { margin-top:8px; }

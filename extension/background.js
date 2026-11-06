@@ -110,3 +110,4 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
 
 importScripts('myshows-core.js', 'myshows-worker.js');
 importScripts('diagnostics-worker.js');
+importScripts('search-rules.js', 'search-core.js', 'search-store.js', 'backup-core.js', 'backup-worker.js');

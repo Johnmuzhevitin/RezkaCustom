@@ -34,7 +34,8 @@ async function menu(t, { section = 'view', stored = {}, save, tabState, workerBu
         storage: {
             local: {
                 async get() { return { ...values }; },
-                async set(items) { Object.assign(values, items); }
+                async set(items) { Object.assign(values, items); storageChanged(Object.fromEntries(Object.entries(items).map(([key, newValue]) => [key, { newValue }])), 'local'); },
+                async remove(key) { delete values[key]; storageChanged({ [key]: {} }, 'local'); }
             },
             onChanged: { addListener(fn) { storageListeners.add(fn); }, removeListener(fn) { storageListeners.delete(fn); } }
         },
@@ -68,7 +69,8 @@ async function menu(t, { section = 'view', stored = {}, save, tabState, workerBu
         }
     };
     window.eval('const REZKA_BUILD = ' + JSON.stringify(testBuild) + ';\n' + read('extension/network-policy.js') + '\n' + read('extension/settings-schema.js') +
-        '\nglobalThis.testSettings = REZKA_SETTINGS;\n' + read('extension/myshows-core.js') + '\n' + read('extension/myshows-panel.js') + '\n' + read('extension/popup.js'));
+        '\nglobalThis.testSettings = REZKA_SETTINGS;\n' + read('extension/myshows-core.js') + '\n' + read('extension/myshows-panel.js')
+        + '\n' + read('extension/popup.js'));
     await tick();
     const $ = selector => window.document.querySelector(selector);
     const search = query => { $('#search-input').value = query; $('#search-input').dispatchEvent(new window.Event('input')); };
@@ -79,12 +81,50 @@ async function menu(t, { section = 'view', stored = {}, save, tabState, workerBu
     return { window, $, values, messages, search, activate, update, reloads, myshowsState, poll };
 }
 
-for (const retiredSection of ['subs', 'filter']) test(`removed ${retiredSection} section falls back to appearance and search exposes only retained settings`, async t => {
+test('exclusion management lives on the site and is absent from the extension panel', async t => {
+    const key = 'rc-excluded:v1:42';
+    const { $, values, search, window } = await menu(t, { stored: { [key]: { version: 1, id: '42', title: 'Excluded film' } } });
+    assert.equal($('.exclusions-panel'), null);
+    assert.equal(window.document.querySelectorAll('nav [role="tab"]').length, 3);
+    search('исключ'); await tick();
+    assert.ok($('.empty'));
+    assert.equal(values[key].title, 'Excluded film');
+    assert.equal($('.exclusions-panel'), null);
+});
+
+test('the search limit defaults to 10000, saves and survives reopening the panel', async t => {
+    const { window, $, values, search, reloads } = await menu(t);
+    const control = $('[data-setting="search-candidate-limit"]');
+    assert.equal(control.selectedOptions[0].textContent, '10 000');
+    control.value = '3'; control.dispatchEvent(new window.Event('change'));
+    await tick();
+    assert.equal(values['r4:search-candidate-limit'], 25000);
+    const reopened = await menu(t, { stored: values });
+    assert.equal(reopened.$('[data-setting="search-candidate-limit"]').selectedOptions[0].textContent, '25 000');
+    search('лимит'); assert.ok($('[data-setting="search-candidate-limit"]'));
+    assert.deepEqual(reloads, []);
+});
+
+test('restore refreshes pending settings feedback without reloading the page or replacing the panel search', async t => {
+    let restored = false;
+    const { window, $, search, reloads } = await menu(t, {
+        tabState: async () => ({ connected: true, settings: [], pendingReload: restored ? ['font'] : [] })
+    });
+    search('шрифт');
+    restored = true;
+    window.document.dispatchEvent(new window.Event('rezka:backup-restored'));
+    await tick();
+    assert.equal($('#reload-button').hidden, false);
+    assert.equal($('#search-input').value, 'шрифт');
+    assert.deepEqual(reloads, []);
+});
+
+for (const retiredSection of ['subs', 'filter', 'hide']) test(`removed ${retiredSection} section falls back to appearance and search exposes only retained settings`, async t => {
     const country = { name: 'hide-russian', label: 'Россия (Russian)', options: [{ text: 'Выкл', value: false }, { text: 'Вкл', value: true }], defaultIndex: 0 };
     const { $, window, search, values, messages } = await menu(t, { section: retiredSection,
         stored: { 'r4:content-size': 'r4-content-size-ultrawide', 'ui:country:hide-russian': country },
         tabState: async () => ({ connected: true, settings: [country], pendingReload: [] }) });
-    assert.equal(window.document.querySelectorAll('[role="tab"]').length, 4);
+    assert.equal(window.document.querySelectorAll('[role="tab"]').length, 3);
     assert.equal($('#tab-view').getAttribute('aria-selected'), 'true');
     assert.equal(values['r4:content-size'], 'r4-content-size-ultrawide');
     assert.equal(values['ui:last-section'], 'view');
@@ -99,6 +139,40 @@ for (const retiredSection of ['subs', 'filter']) test(`removed ${retiredSection}
     assert.equal($('#content').getAttribute('role'), 'region');
     assert.equal(window.document.querySelectorAll('[role="switch"]').length, 2);
     assert.deepEqual(messages, []);
+});
+
+test('appearance retains cleanup settings and their saved values; retired settings stay absent even in old page replies', async t => {
+    const retired = ['player-scale', 'player-triple-click', 'player-full-page', 'snap-scroll',
+        'snap-scroll-onload', 'hide-info', 'more-hide', 'translators'];
+    const stale = retired.map(name => ({ name, label: 'Retired option', defaultIndex: 1,
+        options: [{ text: 'Выкл', value: false }, { text: 'Вкл', value: true }] }));
+    const { $, window, search, values, messages } = await menu(t, {
+        stored: { 'r4:hide-ads': 'r4-hide-ads', 'r4:hide-player-ads': 'r4-player-hide-ads',
+            'r4:comments-hide': 'r4-comments-hide-enabled', ...Object.fromEntries(retired.map(name => ['r4:' + name, true])) },
+        tabState: async () => ({ connected: true, settings: stale })
+    });
+    assert.deepEqual([...window.document.querySelectorAll('[role="tab"]')].map(tab => tab.dataset.section), ['view', 'player', 'myshows']);
+    for (const name of ['hide-ads', 'hide-player-ads', 'comments-hide']) {
+        const control = $(`[data-setting="${name}"]`);
+        assert.equal(control.checked, true, name);
+        control.click();
+        await tick();
+        assert.equal(control.checked, false, name);
+    }
+    assert.deepEqual(messages.map(message => [message.name, message.index]), [['hide-ads', 0], ['hide-player-ads', 0], ['comments-hide', 0]]);
+    const reopened = await menu(t, { stored: values });
+    for (const name of ['hide-ads', 'hide-player-ads', 'comments-hide']) assert.equal(reopened.$(`[data-setting="${name}"]`).checked, false);
+    for (const query of ['масштаб', 'тройной', 'разворачивать при', 'прилипание', 'сразу прокручивать',
+        'сворачивать описание', 'сворачивать рекомендации', 'сворачивать список переводов']) {
+        search(query);
+        assert.ok($('.empty'), query);
+    }
+    $('#tab-player').click();
+    for (const name of retired) assert.equal($(`[data-setting="${name}"]`), null, name);
+    $('#tab-player').dispatchEvent(new window.KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    assert.equal(window.document.activeElement, $('#tab-myshows'));
+    $('#tab-myshows').dispatchEvent(new window.KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    assert.equal(window.document.activeElement, $('#tab-view'));
 });
 
 test('MyShows journal separates queue, attention and history, filters accounts and renders titles as text', async t => {
@@ -320,7 +394,7 @@ test('journal icon details stay read-only, follow the selected record and close 
     $('[data-filter="history"]').click();
     const row = $('.myshows-entry'), first = $('[data-myshows-info="entry"]'), other = $('[data-myshows-info="other"]'), info = $('.myshows-info');
     assert.equal(row.querySelectorAll('.myshows-entry-icons > :not([hidden])').length, 3);
-    assert.equal(row.querySelector('.myshows-actions').hidden, true);
+    assert.equal(row.querySelector('.myshows-actions'), null);
     assert.equal(row.querySelector('.myshows-state').hidden, true);
     for (const control of row.querySelectorAll('.myshows-entry-icons > *')) {
         assert.ok(control.getAttribute('aria-label')); assert.ok(control.title);
@@ -614,7 +688,7 @@ test('movie panel uses film actions, generic thresholds and movie links while pr
     $('.myshows-current button').click(); await tick();
     assert.equal(messages.find(m => m.type === 'myshows:force').key, 'movie:123');
     search('original film'); await tick(); assert.equal($('.myshows-entry h3').textContent, 'Example film');
-    assert.equal($('[data-myshows-action="film-force"]').textContent, 'Засчитать фильм');
+    assert.equal($('[data-myshows-action="film-force"]').getAttribute('aria-label'), 'Засчитать фильм');
     setState({ ...initial, entries: [{ ...film, status: 'done', movieId: 456, manualAt: 1 }, initial.entries[1]] });
     assert.equal($('.myshows-current button').hidden, true);
     assert.equal($('.myshows-current a').href, 'https://myshows.me/movie/456/');
@@ -675,5 +749,92 @@ test('local reset stays available while disconnected and is hidden for pending o
     for (const status of ['watching', 'queued', 'sending', 'confirming', 'checking', 'attention', 'cancelled']) {
         update({ ...state, entries: [myshowsEntry({ status, submittedAt: 1 })] });
         assert.equal($('[data-myshows-current="reset"]').hidden, true);
+    }
+});
+
+test('every history state uses compact labelled icons with status and recovery details in the popover', async t => {
+    const entries = [
+        myshowsEntry({ status: 'cancelled' }),
+        myshowsEntry({ id: 'uncertain', status: 'cancelled', submittedAt: 1 }),
+        myshowsEntry({ id: 'reset', status: 'reset' }),
+        myshowsEntry({ id: 'done', status: 'done', episodeId: 987 })
+    ];
+    const { $, search } = await menu(t, { section: 'myshows', stored: { 'myshows:state': myshowsState(entries) } });
+    $('[data-filter="history"]').click();
+    for (const item of entries) {
+        const row = $(`.myshows-entry[data-id="${item.id}"]`);
+        assert.equal(row.querySelector(':scope > .myshows-state:not([hidden]), :scope > .myshows-description:not([hidden]), .text-button'), null);
+        for (const control of row.querySelectorAll('.myshows-entry-icons > :not([hidden])')) {
+            assert.equal(control.textContent, ''); assert.ok(control.title); assert.ok(control.getAttribute('aria-label'));
+            const use = control.querySelector('svg use'); assert.ok(use);
+            assert.ok($(use.getAttribute('href')), 'the action icon must exist in the shipped sprite');
+        }
+        row.querySelector('[data-myshows-info]').click();
+        assert.ok($('.myshows-info .myshows-state').textContent);
+        assert.ok($('.myshows-info').textContent.includes(item.id === 'uncertain' ? 'Запрос уже отправлен' : item.status === 'reset' ? 'В MyShows ничего не изменилось' : item.status === 'done' ? 'Отметка проверена' : 'продолжить отслеживание'));
+        $('.myshows-info button').click();
+        assert.equal($(`[data-myshows-action="${item.id}-remove"]`).hidden, item.id !== 'entry');
+    }
+    assert.equal($('[data-myshows-action="entry-resume"]').hidden, false);
+    assert.equal($('[data-myshows-action="entry-force"]').hidden, false);
+    search('Example');
+    assert.equal($('.myshows-entry > .myshows-state:not([hidden])'), null);
+});
+
+test('removal handles failure, duplicate clicks, focus, counts and search without implying resumed tracking', async t => {
+    const initial = myshowsState([myshowsEntry({ status: 'cancelled' })], { connection: 'disconnected', enabled: false });
+    let pending = deferred();
+    const h = await menu(t, { section: 'myshows', stored: { 'myshows:state': initial }, myshows: message =>
+        message.type === 'myshows:current' ? currentMyshows({ seconds: 15, state: 'playing' }) : pending.promise });
+    const { $, messages, window, search } = h;
+    $('[data-filter="history"]').click();
+    const remove = $('[data-myshows-action="entry-remove"]');
+    assert.equal(remove.disabled, false, 'local deletion must work while disconnected');
+    remove.focus(); remove.click(); remove.click();
+    assert.equal(messages.length, 1); assert.equal(remove.disabled, true);
+    assert.equal(messages[0].type, 'myshows:remove'); assert.equal(messages[0].account, 'testuser'); assert.equal(messages[0].id, 'entry');
+    pending.resolve({ ok: false, error: 'Не удалось сохранить изменения.' }); await tick();
+    assert.ok($('.myshows-entry')); assert.equal(remove.disabled, false);
+    assert.match($('.myshows-message').textContent, /Не удалось сохранить/);
+    pending = deferred(); remove.focus(); remove.click();
+    h.myshowsState({ ...initial, entries: [], removed: [{ key: '123:1:2', account: 'testuser' }], enabled: true, connection: 'connected' });
+    pending.resolve({ ok: true, notice: 'Запись удалена из истории.' }); await tick();
+    assert.equal($('.myshows-entry'), null); assert.equal($('[data-filter="history"] .myshows-filter-count').textContent, '0');
+    assert.equal(window.document.activeElement, $('[data-filter="history"]'));
+    assert.match($('.myshows-current .myshows-state').textContent, /Удалено из истории/);
+    assert.match($('.myshows-current').textContent, /Автоотметка для этого просмотра остановлена/);
+    assert.equal($('.myshows-confirmation').hidden, true);
+    assert.equal($('.myshows-current button').hidden, false);
+    search('Example'); assert.equal($('.myshows-entry'), null); assert.match($('.myshows-empty').textContent, /Ничего не найдено/);
+});
+
+test('removed current films and episodes offer explicit tracking restoration with failure and double-click handling', async t => {
+    for (const movie of [false, true]) {
+        const episode = movie ? { rezkaId: 123, kind: 'movie', title: 'Example film' } : myshowsEpisode;
+        const key = movie ? 'movie:123' : '123:1:2';
+        const initial = myshowsState([], { removed: [{ account: 'testuser', key }] });
+        let pending = deferred();
+        const h = await menu(t, { section: 'myshows', stored: { 'myshows:state': initial }, myshows: message =>
+            message.type === 'myshows:current' ? { ok: true, current: { tabId: 1, key, episode } } : pending.promise });
+        const { $, messages } = h;
+        const restore = $('[data-myshows-current="restore"]');
+        assert.ok(restore, 'removed playback needs an action to resume automatic tracking');
+        assert.equal(restore.hidden, false); assert.equal(restore.disabled, false);
+        assert.equal(restore.textContent, 'Возобновить учёт');
+        restore.click(); restore.click();
+        assert.equal(messages.length, 1); assert.equal(restore.disabled, true);
+        assert.deepEqual({ ...messages[0] }, { type: 'myshows:restore', tabId: 1, key, account: 'testuser' });
+        pending.resolve({ ok: false, error: 'Не удалось сохранить изменения.' }); await tick();
+        assert.equal(restore.disabled, false); assert.match($('.myshows-message').textContent, /Не удалось сохранить/);
+        pending = deferred(); restore.click();
+        h.myshowsState({ ...initial, removed: [], entries: [myshowsEntry({ key, episode, progress: 0 })] });
+        pending.resolve({ ok: true, notice: 'Учёт возобновлён.' }); await tick();
+        assert.equal(restore.hidden, true); assert.equal($('.myshows-progress-meter').value, 0);
+        assert.doesNotMatch($('.myshows-current .myshows-state').textContent, /Удалено/);
+        assert.equal(messages.filter(message => message.type === 'myshows:force').length, 0);
+        h.myshowsState({ ...initial, connection: 'disconnected' });
+        assert.equal(restore.hidden, false); assert.equal(restore.disabled, true);
+        h.myshowsState({ ...initial, account: 'other' });
+        assert.equal(restore.hidden, true);
     }
 });

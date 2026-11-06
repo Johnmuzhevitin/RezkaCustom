@@ -24,6 +24,62 @@ function removeRange(start, end) {
     if (to < from) throw new Error('Removal range is invalid: ' + start);
     source = source.slice(0, from) + source.slice(to);
 }
+function replaceCount(before, after, count) {
+    if (source.split(before).length !== count + 1) throw new Error('Patch count changed: ' + before);
+    source = source.replaceAll(before, after);
+}
+// Remove retired features before extracting settings, so saved values cannot
+// reactivate their handlers or styles. Keep the pinned baseline unchanged.
+removeRange('    /* --------------PLAYER-SCALE----------------------- */', '    /* --------------NAVBAR-LINKS----------------------- */');
+removeRange('    /* --------------HIDE-INFO-------------------------- */', '    /* --------------HIDE-COMMENTS---------------------- */');
+removeRange('    /* --------------HIDE-MORE-------------------------- */', '    /* --------------IMDB-RATING------------------------ */');
+removeRange('    /* --------------SNAP-SCROLL------------------------- */', '    /* --------------SETTINGS--------------------------- */');
+for (const name of ['initPlayerScale', 'initHideInfo', 'initHideMore', 'initHideTranslators', 'initSnapScroll']) {
+    replaceOnce(`    ${name}();\n`, '');
+}
+removeRange('        function scale() {', '        function title() {');
+replaceOnce('                    // scale();\n', '');
+replaceCount('                    scale();\n', '', 5);
+replaceOnce('            scale,\n', '');
+replaceOnce('            scale: 1,               // Player scale\n', '');
+replaceCount('            /* Somehow after scale it is mess with z-index in safari after scale */\n', '', 2);
+// Scaling used to create a stacking context. Preserve that boundary explicitly
+// so the negative video/poster layers stay above the player's black background.
+replaceOnce('        .b-player .b-simple_seasons__list {', `        #oframecdnplayer {
+            isolation: isolate;
+        }
+        .b-player .b-simple_seasons__list {`);
+removeRange('        body.r4-content-size-mobile.r4-player-cover.r4-hide-info .r4-player-top-bar-heading {', '        body.r4-content-size-mobile .b-tophead-right {');
+replaceOnce(`        body.r4-player-no-margin .r4-hide-info-button {
+            right: -10px;
+        }
+
+        body.r4-player-no-margin.r4-hide-info .b-content__columns {
+            padding-top: 0 !important;
+        }
+
+`, '');
+removeRange('        body.r4-player-cover.r4-hide-info:not(.r4-playing) .r4-player-top-bar-cover {', '        .r4-player-top-bar-title {');
+removeRange('        body.r4-style .r4-toggle-translators-button {', '        /* Misc */');
+// The large click zones belong only to triple-click navigation. Normal player
+// buttons, fullscreen and manual full-page expansion remain available.
+removeRange('        .r4-player-control-large-next,', '        #oframecdnplayer > pjsdiv {');
+removeRange('        const config = {\n            multiClick:', '        const elements = {\n            topBar:');
+replaceOnce('            controlsLargePrev: null,\n            controlsLargeNext: null,\n', '');
+removeRange('            elements.controlsLargePrev = createControlLarge(', '        });\n\n        function appendElements() {');
+replaceOnce('                r4.player.elements.oframecdnplayer.appendChild(elements.controlsLargePrev);\n                r4.player.elements.oframecdnplayer.appendChild(elements.controlsLargeNext);\n', '');
+replaceCount('                    r4.player.elements.oframecdnplayer.querySelector(".r4-player-control-large-prev").classList.add("hidden");\n', '', 2);
+removeRange('        function createControlLarge(', '        window.addEventListener("message", (event) => {\n            switch (event.data?.event) {\n                case "init":\n                    appendElements();');
+replaceOnce(`                case "play":
+                    if (!r4.player.state.collapsed && document.body.classList.contains("r4-player-full-page-enabled")) {
+                        expand();
+                    }
+                    break;
+`, '');
+replaceOnce('            collapsed: false,       // Player was already collapsed, used to prevent ferther collapses if auto expand is enabled\n', '');
+replaceOnce('            r4.player.state.collapsed = true;\n', '');
+removeRange('        r4.settings?.createTumblerSetting({\n            name: "player-triple-click",', '    }\n\n    /* ------------------------------------------------- */\n    /* --------------PLAYER-AUTO-PLAY-NEXT-------------- */');
+replaceOnce('            submenu: "Автоматическое сворачивание",', '            submenu: "Интерфейс",');
 // Add the extension setting before capture so the panel and runtime share one
 // declaration. The pinned upstream file remains unchanged.
 replaceOnce('    r4.player = initPlayer();', `    r4.player = initPlayer();
@@ -40,18 +96,35 @@ replaceOnce('    r4.player = initPlayer();', `    r4.player = initPlayer();
 replaceOnce('    initStyleImprovements();', `    initStyleImprovements();
     r4.settings.createTumblerSetting({
         name: "dim-watched",
-        label: "Приглушать просмотренное",
+        label: "Различать статусы просмотра",
         submenu: "Интерфейс",
         classes: ["r4-on-of-tumbler"],
         options: [
             { text: "Выкл", value: false },
             { text: "Вкл", value: true, default: true }
         ]
+    });
+    r4.settings.createTumblerSetting({
+        name: "search-candidate-limit",
+        label: "Лимит проверки карточек",
+        submenu: "Поиск",
+        classes: [],
+        options: [
+            { text: "1 000", value: 1000 },
+            { text: "5 000", value: 5000 },
+            { text: "10 000", value: 10000, default: true },
+            { text: "25 000", value: 25000 },
+            { text: "50 000", value: 50000 }
+        ]
     });`);
 const schema = extractSettings(source);
 await write('extension/settings-schema.js', '// Generated from the pinned upstream declarations and explicit extension patches.\nconst REZKA_SETTINGS = ' + JSON.stringify(schema, null, 2) + ';\n');
 source = source.slice(source.indexOf('(function () {'));
 replaceOnce('    "use strict";', '    "use strict";\n    if (!RezkaNetwork.isSite(location.href)) return;');
+// The site can omit viewport metadata, including on a title page. This optional
+// legacy adjustment must not break settings initialization in that document.
+replaceOnce("            viewport.setAttribute('content', 'width=640');",
+    "            viewport?.setAttribute('content', 'width=640');");
 // Subtitle integration is intentionally absent from the shipped extension.
 // Keep the pinned upstream input intact and verify every removal boundary.
 removeRange('    function initPlayerSubtitles(options = {}) {', '    function initPlayerExtraControls() {');
@@ -96,6 +169,30 @@ replaceOnce('navbar.querySelectorAll(".b-topnav__item-link").forEach(replace);',
     'navbar.querySelectorAll("a.b-topnav__item-link[href]").forEach(replace);');
 replaceOnce('navbar.querySelectorAll(".b-topnav__sub_inner .left a").forEach(replace);',
     'navbar.querySelectorAll(".b-topnav__sub_inner .left a[href]").forEach(replace);');
+// Appended native cards need the same optional enhancements as the initial page.
+replaceOnce('        r4.settings?.createTumblerSetting({\n            name: "imdb",', `        document.addEventListener("rezka:cards-added", event => {
+            if (!document.body.classList.contains("r4-imdb") || !(event.target instanceof Element)) return;
+            getAndShowRatings(Array.from(event.target.querySelectorAll(".b-content__inline_item[data-rc-page-added]")));
+        });
+
+        r4.settings?.createTumblerSetting({
+            name: "imdb",`);
+replaceOnce('            document.querySelectorAll(".b-content__inline_item .b-content__inline_item-link div").forEach((elem) => {',
+    `            function markCountries(root, selector = ".b-content__inline_item .b-content__inline_item-link div") {
+            root.querySelectorAll(selector).forEach((elem) => {`);
+replaceOnce('            // Add NOT_SPECIFIED_COUNTRY\n            countries.push(NOT_SPECIFIED_COUNTRY);',
+    `            }
+            markCountries(document);
+            document.addEventListener("rezka:cards-added", event => {
+                if (!(event.target instanceof Element)) return;
+                const previousCount = countries.length;
+                markCountries(event.target, ".b-content__inline_item[data-rc-page-added] .b-content__inline_item-link > div");
+                countries.slice(previousCount).forEach(handleCountry);
+                void makeHiddenCounters();
+            });
+
+            // Add NOT_SPECIFIED_COUNTRY
+            countries.push(NOT_SPECIFIED_COUNTRY);`);
 // The side panel owns the visible settings UI and persists country selections.
 const menuStart = source.indexOf('    function initSettings() {');
 const menuEnd = source.indexOf('    function missingSettingHandler(name) {', menuStart);

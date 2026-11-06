@@ -1,6 +1,6 @@
 {
   "name": "rezka-custom",
-  "version": "0.7.2",
+  "version": "0.12.2",
   "private": true,
   "description": "Standalone Chromium port of HDrezka Improvement 2.1.8",
   "scripts": {

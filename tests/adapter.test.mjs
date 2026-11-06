@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, existsSync } from 'node:fs';
 import vm from 'node:vm';
+import { extractSettings } from '../tools/extract-settings.mjs';
 
 const read = file => readFileSync(new URL(`../${file}`, import.meta.url), 'utf8');
 
@@ -82,14 +83,26 @@ test('network boundary rejects other pages, arbitrary services, credentials and 
     }
 });
 
-test('port retains the other feature initializers and every base setting', () => {
+test('port retains supported feature initializers and settings without retired implementations', () => {
     const upstream = read('upstream/hdrezka-improvement-2.1.8.user.js');
     const port = read('extension/improvement.js');
     const added = new Set(['name: "player-max-quality"', 'label: "Всегда максимальное качество"',
-        'name: "dim-watched"', 'label: "Приглушать просмотренное"']);
-    for (const pattern of [/function init\w+\(/g, /name: ["`][^"`]+["`]/g, /label: "[^"\n]+"/g]) {
-        assert.deepEqual(port.match(pattern).filter(item => !added.has(item)), upstream.match(pattern).filter(item => item !== 'function initPlayerSubtitles('));
+        'name: "dim-watched"', 'label: "Различать статусы просмотра"',
+        'name: "search-candidate-limit"', 'label: "Лимит проверки карточек"']);
+    const retiredNames = new Set(['player-scale', 'player-triple-click', 'player-full-page', 'snap-scroll',
+        'snap-scroll-onload', 'hide-info', 'more-hide', 'translators']);
+    const removed = new Set(['initPlayerSubtitles', 'initPlayerScale', 'initHideInfo', 'initHideMore',
+        'initHideTranslators', 'initSnapScroll'].map(name => `function ${name}(`));
+    for (const config of extractSettings(upstream).filter(config => retiredNames.has(config.name))) {
+        removed.add(`name: "${config.name}"`);
+        removed.add(`label: "${config.label}"`);
     }
+    for (const pattern of [/function init\w+\(/g, /name: ["`][^"`]+["`]/g, /label: "[^"\n]+"/g]) {
+        assert.deepEqual(port.match(pattern).filter(item => !added.has(item)), upstream.match(pattern).filter(item => !removed.has(item)));
+    }
+    const schema = vm.runInNewContext(read('extension/settings-schema.js') + '; REZKA_SETTINGS;');
+    assert.equal(schema.some(config => retiredNames.has(config.name)), false);
+    assert.doesNotMatch(port, /r4-player-scale|r4-player-triple-click|r4-player-full-page-enabled|r4-snap-scroll|r4-hide-info|r4-more-hide|r4-translators-hide|r4-toggle-translators|controlsLarge|createControlLarge|state\.scale|state\.collapsed/);
     assert.equal(port.includes('executeLocation('), false);
     assert.equal(read('extension/vendor/r4-utils.js').includes('javascript:'), false);
     assert.equal(port.includes('script_homepage: null'), true);

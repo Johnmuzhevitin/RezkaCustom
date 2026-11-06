@@ -126,7 +126,7 @@ const RezkaWatchedSite = (() => {
             }
             const confirmed = needsConfirmation ? await load() : state;
             if (confirmed.watched.has(id) !== desired) throw new Error('Watched state not confirmed');
-            return confirmed.watched;
+            return confirmed;
         };
         // The native endpoint toggles a save. Serialize our read/toggle/read sequence across tabs.
         return navigator.locks ? navigator.locks.request('rezka-custom:watched:' + id, update) : update();

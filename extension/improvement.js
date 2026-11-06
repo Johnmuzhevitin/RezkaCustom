@@ -180,16 +180,17 @@
         .b-player #cdnplayer-preloader.loading.transparent {
             background: transparent !important;
         }
+        #oframecdnplayer {
+            isolation: isolate;
+        }
         .b-player .b-simple_seasons__list {
             padding: 10px;
         }
         #oframecdnplayer > pjsdiv[style*="width: 100%; height: 100%;"] {
-            /* Somehow after scale it is mess with z-index in safari after scale */
             /* This fixes the issue with controls hovered by the poster */
             z-index: -1 !important;
         }
         #pjsfrrscdnplayer {
-            /* Somehow after scale it is mess with z-index in safari after scale */
             /* Keep volume scrolling inside the player. */
             z-index: -1 !important;
         }
@@ -276,40 +277,6 @@
             elements.cdnplayer.style.height = `${size.height}px`;
 
             console.log(`Player resized to ${size.width | 0}x${size.height | 0}`);
-        }
-
-        function scale() {
-            if (!elements.oframecdnplayer) {
-                console.debug(`Player scale skipped - missing oframecdnplayer element`);
-                return;
-            }
-
-            const percentage = {
-                width: 100 / state.scale,
-                height: 100 / state.scale,
-                left: (100 - (100 / state.scale)) / 2,
-                top: (100 - (100 / state.scale)) / 2,
-            }
-
-            console.debug(`Player scale calculations`, {
-                scale: state.scale,
-                percentage
-            });
-
-            const transform = `scale(${state.scale})`;
-
-            if (elements.oframecdnplayer.style.transform === transform) {
-                console.debug(`Player scale skipped - already at target scale`);
-                return;
-            }
-
-            elements.oframecdnplayer.style.width = `${percentage.width}%`;
-            elements.oframecdnplayer.style.height = `${percentage.height}%`;
-            elements.oframecdnplayer.style.left = `${percentage.left}%`;
-            elements.oframecdnplayer.style.top = `${percentage.top}%`;
-            elements.oframecdnplayer.style.transform = transform;
-
-            console.log(`Player scaled to ${state.scale * 100}%`);
         }
 
         function title() {
@@ -449,12 +416,10 @@
             adjusting: false,       // Player is adjusting now (rewind or forward)
             fullscreen: false,      // Player is in fullscreen mode
             expanded: false,        // Player is expanded to full page
-            collapsed: false,       // Player was already collapsed, used to prevent ferther collapses if auto expand is enabled
             resized: false,         // Player was already resized to fit the container, used to prevent ferther resizes
             vast: false,            // Player should show ads
             size: {},               // Player size
             min: {},                // Player min size
-            scale: 1,               // Player scale
             poster: null,
             interval: null,
         };
@@ -535,19 +500,16 @@
                         height: elements?.video?.videoHeight || state.size.height,
                     };
                     // fit();
-                    // scale();
                     break;
                 case "init":
                     find();
                     fit();
-                    scale();
                     vast();
                     poster();
                     break;
                 case "inited":
                     find();
                     fit();
-                    scale();
                     vast();
                     poster();
                     elements.cdnplayer.oncontextmenu = undefined;
@@ -561,14 +523,12 @@
                 case "new":
                     find();
                     fit();
-                    scale();
                     vast();
                     state.resized = false;
                     break;
                 case "quality":
                     find();
                     fit();
-                    scale();
                     state.resized = false;
                     break;
                 case "play":
@@ -603,7 +563,6 @@
                 case "exitfullscreen":
                     state.fullscreen = false;
                     fit();
-                    scale();
                     break;
                 case "fragment":
                     break;
@@ -633,7 +592,6 @@
             togglefullscreen,
             poster,
             fit,
-            scale,
             mute,
             volume,
             vast,
@@ -698,12 +656,6 @@
         }
         body.r4-content-size-mobile.r4-player-cover:not(.r4-playing) .r4-player-top-bar {
             padding: 10px;
-        }
-        body.r4-content-size-mobile.r4-player-cover.r4-hide-info .r4-player-top-bar-heading {
-            width: calc(100% - 70px - 10px);
-        }
-        body.r4-content-size-mobile.r4-player-cover.r4-hide-info:not(.r4-playing) .r4-player-top-bar-cover {
-            width: 70px;
         }
         body.r4-content-size-mobile .b-tophead-right {
             width: auto;
@@ -837,7 +789,7 @@
 
         r4.settings.afterStart(() => {
             const viewport = document.querySelector("meta[name=viewport]");
-            viewport.setAttribute('content', 'width=640');
+            viewport?.setAttribute('content', 'width=640');
         });
 
         function isCssApplied(element, property, value) {
@@ -966,14 +918,6 @@
             margin-right: -30px;
         }
 
-        body.r4-player-no-margin .r4-hide-info-button {
-            right: -10px;
-        }
-
-        body.r4-player-no-margin.r4-hide-info .b-content__columns {
-            padding-top: 0 !important;
-        }
-
         /* !css */
 
         `);
@@ -998,74 +942,6 @@
                     text: "Вкл",
                     end: async () => {
                         r4.player.fit();
-                    },
-                },
-            ],
-        });
-    }
-
-    /* ------------------------------------------------- */
-    /* --------------PLAYER-SCALE----------------------- */
-    /* ------------------------------------------------- */
-
-    function initPlayerScale() {
-        GM.addStyle(`
-
-        /* css */
-
-        body.r4-player-scale-1-5-x.r4-player-cover:not(.r4-playing) .r4-player-top-bar {
-            padding: 10px;
-        }
-        body.r4-player-scale-1-5-x.r4-player-cover.r4-hide-info:not(.r4-playing) .r4-player-top-bar-cover {
-            width: 100px;
-        }
-        body.r4-player-scale-1-5-x.r4-player-cover.r4-hide-info .r4-player-top-bar-heading {
-            width: calc(100% - 100px - 10px);
-        }
-
-        body.r4-player-scale-2-0-x.r4-player-cover:not(.r4-playing) .r4-player-top-bar {
-            padding: 10px;
-        }
-        body.r4-player-scale-2-0-x.r4-player-cover.r4-hide-info:not(.r4-playing) .r4-player-top-bar-cover {
-            width: 50px;
-        }
-        body.r4-player-scale-2-0-x.r4-player-cover.r4-hide-info .r4-player-top-bar-heading {
-            width: calc(100% - 50px - 10px);
-        }
-
-        /* !css */
-
-        `);
-
-        r4.settings?.createTumblerSetting({
-            name: "player-scale",
-            label: "Масштабирование",
-            submenu: "Плеер",
-            classes: [],
-            options: [
-                {
-                    value: "r4-player-scale-1-0-x",
-                    text: "1x",
-                    default: true,
-                    reload: true,
-                    end: async () => {},
-                },
-                {
-                    value: "r4-player-scale-1-5-x",
-                    class: "r4-player-scale-1-5-x",
-                    text: "1.5x",
-                    end: async () => {
-                        r4.player.state.scale = 1.5;
-                        r4.player.scale();
-                    },
-                },
-                {
-                    value: "r4-player-scale-2-0-x",
-                    class: "r4-player-scale-2-0-x",
-                    text: "2x",
-                    end: async () => {
-                        r4.player.state.scale = 2;
-                        r4.player.scale();
                     },
                 },
             ],
@@ -1240,12 +1116,6 @@
             width: 43px;
             border-radius: 3px;
             transition: all .5s ease-out;
-        }
-
-        body.r4-player-cover.r4-hide-info:not(.r4-playing) .r4-player-top-bar-cover {
-            width: 200px;
-            border-radius: 7px;
-            transition: all .5s ease-in;
         }
 
         .r4-player-top-bar-title {
@@ -1445,74 +1315,6 @@
             margin-top: 0 !important;
         }
 
-        .r4-player-control-large-next,
-        .r4-player-control-large-prev {
-            position: absolute;
-            width: 100%;
-            height: 200%;
-            top: -50%;
-            background: #00000000;
-            border-radius: 50%;
-            transition: background-color 0.5s ease;
-            display: none;
-        }
-
-        .r4-player-extra-controls-enabled.r4-player-triple-click-enabled .r4-player-control-large-next,
-        .r4-player-extra-controls-enabled.r4-player-triple-click-enabled .r4-player-control-large-prev {
-            display: block;
-        }
-
-        .r4-player-control-large-next {
-            right: -75%;
-        }
-
-        .r4-player-control-large-prev {
-            left: -75%;
-        }
-
-        .r4-player-control-large-prev.active:before,
-        .r4-player-control-large-next.active:before {
-            content: '';
-            background-repeat: no-repeat;
-            background-size: 30px 30px;
-            background-position: center;
-            height: 100%;
-            width: 100%;
-            position: absolute;
-            filter: invert(100%) sepia(95%) saturate(21%) hue-rotate(280deg) brightness(106%) contrast(106%);
-            opacity: .5;
-        }
-
-        .r4-player-control-large-prev.active:before {
-            margin-left: calc(75% / 2);
-        }
-
-        .r4-player-control-large-next.active:before {
-            margin-left: calc(-75% / 2);
-        }
-
-        .r4-player-control-large-prev.replay:before {
-            background-image: url(${r4.images.replay});
-        }
-
-        .r4-player-control-large-next.forward:before {
-            background-image: url(${r4.images.forward});
-        }
-
-        .r4-player-control-large-prev.prev:before {
-            background-image: url(${r4.images.next});
-            transform: rotate(180deg);
-        }
-
-        .r4-player-control-large-next.next:before {
-            background-image: url(${r4.images.next});
-        }
-
-        .r4-player-control-large-prev.active,
-        .r4-player-control-large-next.active {
-            background: #00000070;
-        }
-
         #oframecdnplayer > pjsdiv {
             z-index: 1;
         }
@@ -1525,19 +1327,10 @@
 
         `);
 
-        const config = {
-            multiClick: {
-                delay: 500,
-                timeout: 350,
-            }
-        }
-
         const elements = {
             topBar: null,
             controlsLeft: null,
             controlsRight: null,
-            controlsLargePrev: null,
-            controlsLargeNext: null,
         };
 
         r4.settings?.afterStart(() => {
@@ -1612,21 +1405,6 @@
 
             elements.topBar.querySelector(".r4-player-top-bar-title").addEventListener("click", toggle);
 
-            elements.controlsLargePrev = createControlLarge(
-                "r4-player-control-large-prev",
-                r4.player.toggle,
-                r4.player.togglefullscreen,
-                (event) => playerControlLargeAction(event, "prev", r4.player.prev),
-                (event) => playerControlLargeAction(event, "replay", () => r4.player.adjust(-5)),
-            );
-
-            elements.controlsLargeNext = createControlLarge(
-                "r4-player-control-large-next",
-                r4.player.toggle,
-                r4.player.togglefullscreen,
-                (event) => playerControlLargeAction(event, "prev", r4.player.next),
-                (event) => playerControlLargeAction(event, "forward", () => r4.player.adjust(5)),
-            );
         });
 
         function appendElements() {
@@ -1634,14 +1412,10 @@
                 r4.player.elements.oframecdnplayer.appendChild(elements.topBar);
                 r4.player.elements.oframecdnplayer.appendChild(elements.controlsLeft);
                 r4.player.elements.oframecdnplayer.appendChild(elements.controlsRight);
-                r4.player.elements.oframecdnplayer.appendChild(elements.controlsLargePrev);
-                r4.player.elements.oframecdnplayer.appendChild(elements.controlsLargeNext);
                 initPIPControl(r4.player.elements.oframecdnplayer);
                 if (!document.querySelector(".b-simple_episodes__list")) {
                     r4.player.elements.oframecdnplayer.querySelector(".r4-player-control-prev").classList.add("hidden");
                     r4.player.elements.oframecdnplayer.querySelector(".r4-player-control-next").classList.add("hidden");
-                    r4.player.elements.oframecdnplayer.querySelector(".r4-player-control-large-prev").classList.add("hidden");
-                    r4.player.elements.oframecdnplayer.querySelector(".r4-player-control-large-prev").classList.add("hidden");
                 }
             }
         }
@@ -1649,7 +1423,6 @@
         function collapse() {
             document.body.classList.remove("r4-player-full-page");
             r4.player.state.expanded = false;
-            r4.player.state.collapsed = true;
             r4.player.fit();
         }
 
@@ -1739,44 +1512,6 @@
             });
         }
 
-        function createControlLarge(className, singleClick, doubleClick, tripleClick, multiClick) {
-            const playerControlLarge = document.createElement("div");
-            playerControlLarge.classList.add(className);
-
-            let clicks = 0;
-            let timer;
-
-            playerControlLarge.addEventListener("click", (event) => {
-                clearTimeout(timer);
-                clicks++;
-                if (clicks < 4) {
-                    timer = setTimeout(() => {
-                        if (clicks == 1) singleClick(event);
-                        else if (clicks == 2) doubleClick(event);
-                        else if (clicks == 3) tripleClick(event);
-                        clicks = 0;
-                    }, config.multiClick.timeout);
-                } else {
-                    multiClick(event);
-                    timer = setTimeout(() => {
-                        clicks = 0;
-                    }, config.multiClick.timeout);
-                }
-            });
-
-            return playerControlLarge;
-        }
-
-        function playerControlLargeAction(event, actionClass, callback) {
-            event.target.classList.add("active");
-            event.target.classList.add(actionClass);
-            setTimeout(() => {
-                event.target.classList.remove("active");
-                event.target.classList.remove(actionClass);
-                callback();
-            }, config.multiClick.delay);
-        }
-
         window.addEventListener("message", (event) => {
             switch (event.data?.event) {
                 case "init":
@@ -1787,11 +1522,6 @@
                     break;
                 case "new":
                     setSeasonAndEpisode();
-                    break;
-                case "play":
-                    if (!r4.player.state.collapsed && document.body.classList.contains("r4-player-full-page-enabled")) {
-                        expand();
-                    }
                     break;
                 case "ui":
                     elements.topBar.classList.toggle("hidden", !event.data.data);
@@ -1844,40 +1574,6 @@
                     class: "r4-player-extra-controls-enabled",
                     text: "Вкл",
                     default: true,
-                },
-            ],
-        });
-        r4.settings?.createTumblerSetting({
-            name: "player-triple-click",
-            label: "Переключение серий тройным кликом",
-            submenu: "Плеер",
-            classes: ["r4-on-of-tumbler"],
-            options: [
-                {
-                    value: "r4-player-triple-click-disabled",
-                    text: "Выкл",
-                },
-                {
-                    value: "r4-player-triple-click-enabled",
-                    class: "r4-player-triple-click-enabled",
-                    text: "Вкл",
-                },
-            ],
-        });
-        r4.settings?.createTumblerSetting({
-            name: "player-full-page",
-            label: "Автоматическое разворачивание",
-            submenu: "Плеер",
-            classes: ["r4-on-of-tumbler"],
-            options: [
-                {
-                    value: "r4-player-full-page-disabled",
-                    text: "Выкл",
-                },
-                {
-                    value: "r4-player-full-page-enabled",
-                    class: "r4-player-full-page-enabled",
-                    text: "Вкл",
                 },
             ],
         });
@@ -2337,10 +2033,6 @@
             background: rgba(89, 105, 102, .7) !important;
         }
 
-        body.r4-style .r4-toggle-translators-button {
-            margin-top: 10px;
-        }
-
         /* Misc */
 
         body.r4-style .b-newest_slider__title {
@@ -2509,128 +2201,6 @@
     }
 
     /* ------------------------------------------------- */
-    /* --------------HIDE-INFO-------------------------- */
-    /* ------------------------------------------------- */
-
-    function initHideInfo() {
-        GM.addStyle(`
-
-        /* css */
-
-        /* Content hide info (button) */
-
-        .r4-hide-info-button {
-            content: '';
-            width: 25px;
-            height: 25px;
-            margin-right: 5px;
-            background-size: 25px 25px;
-            background-repeat: no-repeat;
-            background-image: url(${r4.images.arrow});
-            cursor: pointer;
-            z-index: 2;
-            position: absolute;
-            right: 10px;
-            top: 15px;
-        }
-        .b-post__title {
-            position: relative;
-        }
-        .b-translators__title {
-            margin-right: 40px;
-        }
-        body.r4-hide-info .r4-hide-info-button {
-            transform: rotate(180deg);
-        }
-
-        /* for light theme make arrow white only when info hidden */
-        body:not(.b-theme__template__night).r4-hide-info .r4-hide-info-button,
-        /* for dark theme always make arrow white */
-        body.b-theme__template__night .r4-hide-info-button {
-            filter: invert(100%) sepia(95%) saturate(21%) hue-rotate(280deg) brightness(106%) contrast(106%);
-        }
-
-        body.r4-hide-info.r4-hide-title .r4-hide-info-button {
-            margin-top: -15px;
-        }
-
-
-        /* Content hide info (hidden styles) */
-
-        body.r4-hide-info .b-post__title [itemprop="name"],
-        body.r4-hide-info .b-post__origtitle,
-        body.r4-hide-info .b-post__infotable,
-        body.r4-hide-info .b-post__description,
-        body.r4-hide-info .b-post__infolast {
-            display: none !important;
-        }
-
-        /* Hide Ukraie block info */
-
-        .b-player-block-strip,
-        .b-player-block-inform,
-        .b-player-block-inform2 {
-            top: 0 !important;
-            margin: 0 0 10px 0 !important;
-        }
-
-        body.r4-hide-info .b-player-block-strip,
-        body.r4-hide-info .b-player-block-inform,
-        body.r4-hide-info .b-player-block-inform2 {
-            display: none !important;
-        }
-
-        /* !css */
-
-        `);
-
-        r4.settings?.afterEnd(() => {
-            const title = document.querySelector(".b-post__title");
-            if (!title) return;
-
-            if (title.querySelector(".r4-hide-info-button")) return;
-
-            const button = r4.utils.fromHTML(
-                /* html */
-                `
-                <!-- html -->
-                <div class="r4-hide-info-button pull-right"></div>
-                <!-- !html -->
-                `
-            );
-
-            button.addEventListener("click", () => {
-                document.body.classList.toggle("r4-hide-info");
-            });
-            title.insertBefore(button, title.firstChild);
-        });
-
-        r4.settings?.createTumblerSetting({
-            name: "hide-info",
-            label: "Описание",
-            submenu: "Автоматическое сворачивание",
-            classes: ["r4-on-of-tumbler"],
-            options: [
-                {
-                    value: "r4-hide-info-disabled",
-                    text: "Выкл",
-                    start() {
-                        document.body.classList.remove("r4-hide-info");
-                    },
-                },
-                {
-                    value: "r4-hide-info",
-                    class: "r4-hide-info",
-                    text: "Вкл",
-                    start() {
-                        document.body.classList.add("r4-hide-info");
-                    },
-                },
-            ],
-        });
-    }
-
-    /* ------------------------------------------------- */
     /* --------------HIDE-COMMENTS---------------------- */
     /* ------------------------------------------------- */
 
@@ -2728,7 +2298,7 @@
         r4.settings?.createTumblerSetting({
             name: "comments-hide",
             label: "Отзывы",
-            submenu: "Автоматическое сворачивание",
+            submenu: "Интерфейс",
             classes: ["r4-on-of-tumbler"],
             options: [
                 {
@@ -2745,216 +2315,6 @@
                     start() {
                         document.body.classList.add("r4-comments-hide");
                     },
-                },
-            ],
-        });
-    }
-
-    /* ------------------------------------------------- */
-    /* --------------HIDE-MORE-------------------------- */
-    /* ------------------------------------------------- */
-
-    function initHideMore() {
-        GM.addStyle(`
-
-        /* css */
-
-        .r4-more-title {;
-            cursor: pointer;
-            margin-top: 20px;
-        }
-
-        .r4-more-title .title {
-            float: left;
-        }
-
-        body.r4-more-hide .r4-more-title {
-            margin-bottom: 20px;
-        }
-
-        body.r4-more-hide .r4-more-holder {
-            display: none;
-        }
-
-        .r4-more-hide-act {
-            color: #878586;
-            cursor: pointer;
-            float: right;
-            font-size: 12px;
-            font-weight: normal;
-        }
-
-        .r4-more-hide-act:hover {
-            text-decoration: underline;
-        }
-
-        .r4-more-hide-act-show {
-            display: none;
-        }
-
-        .r4-more-hide-act-hide {
-            display: block;
-        }
-
-        body.r4-more-hide .r4-more-hide-act-show {
-            display: block;
-        }
-
-        body.r4-more-hide .r4-more-hide-act-hide {
-            display: none;
-        }
-
-        /* !css */
-
-        `);
-
-        r4.settings?.afterEnd(() => {
-            document.querySelectorAll(".b-content__main > .b-sidelist__holder").forEach((holder) => {
-                if (!holder.querySelector(".b-content__inline_item")) return
-                if (!holder.previousElementSibling.classList.contains("b-sidetitle")) return
-
-                holder.classList.add("r4-more-holder");
-
-                const title = r4.utils.fromHTML(
-                    /* html */
-                    `
-                    <!-- html -->
-                    <div class="b-sidetitle r4-more-title">
-                        <div class="title">Смотреть еще</div>
-                        <div class="r4-more-hide-act r4-more-hide-act-show">развернуть</div>
-                        <div class="r4-more-hide-act r4-more-hide-act-hide">свернуть</div>
-                    </div>
-                    <!-- !html -->
-                    `
-                );
-
-                holder.previousElementSibling.replaceWith(title);
-
-                title.addEventListener("click", () => {
-                    document.body.classList.toggle("r4-more-hide");
-                });
-            });
-        });
-
-        r4.settings?.createTumblerSetting({
-            name: "more-hide",
-            label: "Смотреть еще",
-            submenu: "Автоматическое сворачивание",
-            classes: ["r4-on-of-tumbler"],
-            options: [
-                {
-                    value: "r4-more-hide-disabled",
-                    text: "Выкл",
-                    start() {
-                        document.body.classList.remove("r4-more-hide");
-                    },
-                },
-                {
-                    value: "r4-more-hide",
-                    class: "r4-more-hide",
-                    text: "Вкл",
-                    start() {
-                        document.body.classList.add("r4-more-hide");
-                    },
-                },
-            ],
-        });
-    }
-
-    /* ------------------------------------------------- */
-    /* --------------TRANSLATORS------------------------ */
-    /* ------------------------------------------------- */
-
-    function initHideTranslators() {
-        GM.addStyle(`
-
-        /* css */
-
-        /* Content hide translators */
-
-        .r4-translators-hide-enabled .b-translator__item.active {
-            cursor: pointer;
-        }
-        .r4-translators-hide-enabled .r4-toggle-translators-button {
-            content: '';
-            float: left;
-            width: 20px;
-            height: 20px;
-            margin-right: 3px;
-            margin-top: 8px;
-            margin-left: 5px;
-            background-size: 20px 20px;
-            background-repeat: no-repeat;
-            background-image: url(${r4.images.arrow});
-            filter: invert(100%) sepia(95%) saturate(21%) hue-rotate(280deg) brightness(106%) contrast(106%);
-            transform: rotate(90deg);
-            cursor: pointer;
-        }
-        .r4-translators-hide-enabled .r4-show-translators .r4-toggle-translators-button {
-            transform: rotate(-90deg);
-        }
-        .r4-translators-hide-enabled .b-translator__item:not(.active):not(.r4-toggle-translators-button) {
-            display: none;
-        }
-        .r4-translators-hide-enabled .b-translators__title {
-            display: none;
-        }
-        .r4-translators-hide-enabled .r4-show-translators .b-translator__item:not(.active):not(.r4-toggle-translators-button) {
-            display: block;
-        }
-        .r4-translators-hide-enabled .r4-show-translators .b-translators__title {
-            display: block;
-        }
-
-        /* !css */
-
-        `);
-
-        r4.settings?.afterEnd(() => {
-            function toggle() {
-                document.querySelector(".b-translators__block").classList.toggle("r4-show-translators");
-            }
-
-            const translators = document.querySelector(".b-translators__block");
-            if (!translators) return;
-
-            const translatorsList = translators.querySelector(".b-translators__list");
-            if (!translatorsList) return;
-
-            const toggler = r4.utils.fromHTML(
-                /* html */
-                `
-                <!-- html -->
-                <li class="r4-toggle-translators-button"></li>
-                <!-- !html -->
-                `
-            );
-            toggler.addEventListener("click", toggle);
-            translatorsList.appendChild(toggler);
-
-            translatorsList.querySelectorAll(".b-translator__item").forEach((button) => {
-                button.addEventListener("click", function () {
-                    if (this.classList.contains("active")) {
-                        toggle();
-                    }
-                });
-            });
-        });
-
-        r4.settings?.createTumblerSetting({
-            name: "translators",
-            label: "Список переводов",
-            submenu: "Автоматическое сворачивание",
-            classes: ["r4-on-of-tumbler"],
-            options: [
-                {
-                    value: "r4-translators-hide-disabled",
-                    text: "Выкл",
-                },
-                {
-                    value: "r4-translators-hide-enabled",
-                    class: "r4-translators-hide-enabled",
-                    text: "Вкл",
                 },
             ],
         });
@@ -3199,6 +2559,11 @@
                 });
             }
         }
+
+        document.addEventListener("rezka:cards-added", event => {
+            if (!document.body.classList.contains("r4-imdb") || !(event.target instanceof Element)) return;
+            getAndShowRatings(Array.from(event.target.querySelectorAll(".b-content__inline_item[data-rc-page-added]")));
+        });
 
         r4.settings?.createTumblerSetting({
             name: "imdb",
@@ -3703,7 +3068,8 @@
             // Add enabled countries if they are not already in countries
             countries = countries.concat(enabledCountries.filter((item) => !countries.includes(item)));
 
-            document.querySelectorAll(".b-content__inline_item .b-content__inline_item-link div").forEach((elem) => {
+            function markCountries(root, selector = ".b-content__inline_item .b-content__inline_item-link div") {
+            root.querySelectorAll(selector).forEach((elem) => {
                 let country;
 
                 // Exclude slider
@@ -3729,6 +3095,16 @@
                 }
             });
 
+            }
+            markCountries(document);
+            document.addEventListener("rezka:cards-added", event => {
+                if (!(event.target instanceof Element)) return;
+                const previousCount = countries.length;
+                markCountries(event.target, ".b-content__inline_item[data-rc-page-added] .b-content__inline_item-link > div");
+                countries.slice(previousCount).forEach(handleCountry);
+                void makeHiddenCounters();
+            });
+
             // Add NOT_SPECIFIED_COUNTRY
             countries.push(NOT_SPECIFIED_COUNTRY);
 
@@ -3736,110 +3112,6 @@
             countries.forEach(handleCountry);
 
             showTerroristBanner();
-        });
-    }
-
-    /* ------------------------------------------------- */
-    /* --------------SNAP-SCROLL------------------------- */
-    /* ------------------------------------------------- */
-
-    function initSnapScroll() {
-        GM.addStyle(`
-            /* css */
-            
-            body.r4-snap-scroll .b-player {
-                scroll-margin-top: 0;
-            }
-    
-            /* !css */
-        `);
-    
-        // Helper function for scrolling to content
-        function scrollToContent(smooth = true) {
-            const contentMain = document.querySelector('.b-player');
-            if (!contentMain) return;
-            
-            window.scrollTo({
-                top: contentMain.offsetTop,
-                behavior: smooth ? 'smooth' : 'auto'
-            });
-        }
-    
-        // Scroll snap during scrolling
-        r4.settings?.createTumblerSetting({
-            name: "snap-scroll",
-            label: "Прилипание при прокрутке",
-            submenu: "Плеер",
-            classes: ["r4-on-of-tumbler"],
-            options: [
-                {
-                    value: "r4-snap-scroll-disabled",
-                    text: "Выкл",
-                    reload: true,
-                },
-                {
-                    value: "r4-snap-scroll",
-                    class: "r4-snap-scroll",
-                    text: "Вкл",
-                    end: () => {
-                        const contentMain = document.querySelector('.b-player');
-                        if (!contentMain) return;
-    
-                        let scrollTimeout;
-                        const SNAP_THRESHOLD = 200;
-                        
-                        function smoothScrollToContent() {
-                            // Don't snap if we're at the top of the page
-                            if (window.scrollY < 2) return;
-                            
-                            const contentTop = contentMain.offsetTop;
-                            
-                            // Only snap if we've scrolled before the start of the content block
-                            if (window.scrollY > contentTop) return;
-    
-                            const contentRect = contentMain.getBoundingClientRect();
-                            if (Math.abs(contentRect.top) <= SNAP_THRESHOLD) {
-                                window.scrollTo({
-                                    top: window.scrollY + contentRect.top,
-                                    behavior: 'smooth'
-                                });
-                            }
-                        }
-    
-                        document.addEventListener('scroll', () => {
-                            clearTimeout(scrollTimeout);
-                            scrollTimeout = setTimeout(smoothScrollToContent, 150);
-                        });
-                    },
-                },
-            ],
-        });
-    
-        // Initial page load snap
-        r4.settings?.createTumblerSetting({
-            name: "snap-scroll-onload",
-            label: "Автопрокрутка при загрузке",
-            submenu: "Плеер",
-            classes: ["r4-on-of-tumbler"],
-            options: [
-                {
-                    value: "r4-snap-scroll-onload-disabled",
-                    text: "Выкл",
-                },
-                {
-                    value: "r4-snap-scroll-onload",
-                    class: "r4-snap-scroll-onload",
-                    text: "Вкл",
-                    end: () => {
-                        // Wait for page to fully load
-                        if (document.readyState === 'complete') {
-                            scrollToContent(true);
-                        } else {
-                            window.addEventListener('load', () => scrollToContent(true));
-                        }
-                    },
-                },
-            ],
         });
     }
 
@@ -3914,19 +3186,31 @@
 
     initSettings();
     initContentSizeTumbler();
-    initPlayerScale();
     initPlayerNoMargin();
     initNavbarLinks();
     initFonts();
     initStyleImprovements();
     r4.settings.createTumblerSetting({
         name: "dim-watched",
-        label: "Приглушать просмотренное",
+        label: "Различать статусы просмотра",
         submenu: "Интерфейс",
         classes: ["r4-on-of-tumbler"],
         options: [
             { text: "Выкл", value: false },
             { text: "Вкл", value: true, default: true }
+        ]
+    });
+    r4.settings.createTumblerSetting({
+        name: "search-candidate-limit",
+        label: "Лимит проверки карточек",
+        submenu: "Поиск",
+        classes: [],
+        options: [
+            { text: "1 000", value: 1000 },
+            { text: "5 000", value: 5000 },
+            { text: "10 000", value: 10000, default: true },
+            { text: "25 000", value: 25000 },
+            { text: "50 000", value: 50000 }
         ]
     });
     initHideAds();
@@ -3936,13 +3220,9 @@
     initPlayerCover();
     initPlayerExtraControls();
     initBlackThemeColor()
-    initHideInfo();
     initHideComments();
-    initHideMore();
-    initHideTranslators();
     initHotkeys();
     initHideCountry();
-    initSnapScroll();
 
 
 })();

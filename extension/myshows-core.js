@@ -79,8 +79,11 @@ const RezkaMyShows = (() => {
     function canCancel(entry) { return !!entry && ['watching', 'queued', 'sending', 'confirming', 'checking', 'attention'].includes(entry.status); }
     function canResume(entry) { return entry?.status === 'cancelled' && !entry.submittedAt; }
     function canReset(entry) { return entry?.status === 'done'; }
+    function canRemove(entry) { return entry?.status === 'cancelled' && !entry.submittedAt && !entry.manualPending; }
+    function isRemoved(state, key) { return !!key && !!state?.removed?.some(item => item.account === state.account && item.key === key); }
     function payload(entry, version) {
-        const show = { title: entry.episode.originalTitle || entry.episode.title, ids: { imdb: entry.episode.imdb } };
+        const show = { title: entry.episode.originalTitle || entry.episode.title,
+            ids: entry.episode.imdb ? { imdb: entry.episode.imdb } : {} };
         if (entry.episode.year) show.year = entry.episode.year;
         return { progress: entry.manualAt ? 100 : Math.min(100, Math.ceil(entry.progress * 10) / 10), source_app: entry.source,
             app_version: version, ...(isMovie(entry.episode) ? { movie: show }
@@ -93,5 +96,5 @@ const RezkaMyShows = (() => {
         entry.status = status; entry.reason = reason; entry.updatedAt = now;
         return entry;
     }
-    return { key, historyUrl, positionDelay, terminal, active, initial, mergeRanges, percent, interval, advancePosition, isMovie, validMedia, mediaKey, remoteId, watchUrl, sourceFor, label, canForce, canCancel, canResume, canReset, payload, transition };
+    return { key, historyUrl, positionDelay, terminal, active, initial, mergeRanges, percent, interval, advancePosition, isMovie, validMedia, mediaKey, remoteId, watchUrl, sourceFor, label, canForce, canCancel, canResume, canReset, canRemove, isRemoved, payload, transition };
 })();

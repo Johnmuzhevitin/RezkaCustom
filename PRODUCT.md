@@ -33,7 +33,7 @@ MyShows synchronization removes the routine work of marking individual watched e
 
 ### Extension scope
 
-The existing panel provides appearance, player, hiding-block and MyShows sections. The extension also supplies advanced search and whole-title watched actions on Rezka. MyShows episode marks and Rezka's whole-title watched state are separate concepts.
+The existing panel provides appearance, player and MyShows sections. Advertising switches and comment collapsing are part of appearance. The extension also supplies advanced search and whole-title watched actions on Rezka. MyShows episode marks and Rezka's whole-title watched state are separate concepts.
 
 Preserve the established player and search workflows while improving MyShows. The existing implementation and [development guide](docs/development.md) define supported site contexts and source ownership.
 

@@ -7,14 +7,19 @@
 | Ported site features and navigation fixes | Explicit patches in `tools/build.mjs` | `extension/improvement.js` |
 | Setting declarations | Upstream declarations plus explicit patches in `tools/build.mjs` | `extension/settings-schema.js` |
 | Shared catalogue/search card appearance | `extension/cards.css` | `extension/search-style.js`; injected into the native document and search shadow root |
-| Search layout and controls | `extension/search.css`, `extension/search-page.js` | CSS bundled into `search-style.js`; page script maintained directly |
-| Search parsing, filters, pagination and cache | `extension/search-core.js` | Maintained directly |
+| Search layout and controls | `extension/search.css`, `extension/search-page.js`, `extension/search-editor.js` | CSS bundled into `search-style.js`; page/editor scripts maintained directly |
+| Search parsing, filters, pagination and cache | `extension/search-core.js`, `extension/search-rules.js` | Maintained directly; rules load before the core |
+| Native catalogue/collection continuation | `extension/catalogue-pages.js`, `catalogue-pages.css` | Loaded after search; `tools/build.mjs` connects appended cards to the existing rating/country enhancements |
+| Saved search sets | `extension/search-store.js` | Independent local records; loaded after the core and before the editor |
 | Watched state, card actions and history tabs | `extension/watched-site.js`, `extension/watched.js`, `extension/watched.css` | CSS bundled into `search-style.js`; scripts maintained directly |
+| Persistent title exclusions and recovery | `extension/exclusions.js`, `exclusions-site.js`, `exclusions-profile.js` | CSS in `watched.css`; recovery tab in the site's own profile settings; see [exclusions.md](exclusions.md) |
 | Side-panel interface | `extension/popup.html`, `popup.css`, `popup.js` | Maintained directly |
+| Local backup and selective restore | `extension/backup-core.js`, `backup-worker.js`, `backup-panel.js`, `backup.css` | Worker validates and serializes settings writes; panel owns file selection, preview and download; see [backup.md](backup.md) |
 | MyShows sync and journal | `extension/myshows-core.js`, `myshows-worker.js`, `myshows-tracker.js`, `myshows-site.js`, `myshows-panel.js`, `myshows.css` | Maintained directly; worker import, manifest routes and panel entry are explicit |
 | Page settings and connection state | `extension/settings-controller.js` | Used by generated `extension/vendor/r4-settings.js` |
 | Worker requests and saved settings | `extension/background.js`, `network-policy.js`, `gm-adapter.js` | Maintained directly |
 | Player integration | `extension/player-quality.js`, `player-client.js`, `page-bridge.js` | Maintained directly; MAIN/ISOLATED ordering is in `manifest.json` |
+| Voice selection | `extension/voice-menu.js`, `voice-menu.css`, `voice-switch.js` | Isolated UI/storage and MAIN-world native-player adapter; see `docs/voice-menu.md` |
 | Bundled vendor adjustments | Explicit patches in `tools/build.mjs` | `extension/vendor/r4-utils.js`, `r4-images.js`, `r4-settings.js` |
 | Build identity | `tools/build-info.mjs`, called last by `tools/build.mjs` | `extension/build-info.js` |
 | Read-only support report | `extension/diagnostics-worker.js`, `help.js`, `help.html`, `help.css` | Help view; bounded page reads through `settings-controller.js` and `myshows-tracker.js` |
@@ -34,6 +39,8 @@ Development requires the Node.js versions supported by the locked dependencies (
 | `npm run package` | Run the same offline gate, then create the ZIP; failed checks preserve the previous archive |
 | `npm run test:browser` | Supplementary disposable-browser tests; explicit user permission required |
 | `npm run test:browser:myshows` | Focused MyShows and support-report scenarios using the shared native panel/media fixtures; same permission requirement |
+| `node tools/benchmark-watched.mjs [source-file]` | Synthetic 1000-card DOM workload; reports scheduled scans and attribute writes without a browser or network; optional saved source for comparison |
+| `node tools/benchmark-search.mjs --check` | Deterministic cold/warm metadata workload; reports network waves and cache reuse, with no external requests; `--source <file>` compares a saved core |
 | `npm run setup:git` | Initialize this local repository if needed and install its pre-commit check |
 | `npm run check:browser` | Offline gate followed by the supplementary browser suite; same permission requirement |
 

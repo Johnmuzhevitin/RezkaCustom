@@ -1,3 +1,36 @@
 {
-  "buildPath": "comp"
+  "buildPath": "comp",
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "low-contrast",
+        "value": "*",
+        "files": [
+          "design-previews/card-states/index.html"
+        ],
+        "createdAt": "2026-11-02T14:00:17.490Z",
+        "reason": "Agent: local simulation intentionally preserves the existing completed-card opacity .10 requested by the user; text becomes readable on hover/focus. No new low-contrast active status is approved."
+      },
+      {
+        "rule": "design-system-font",
+        "value": "arial",
+        "files": [
+          "design-previews/card-states/index.html"
+        ],
+        "createdAt": "2026-11-02T14:00:17.904Z",
+        "reason": "Agent: copied native Rezka typography verified in the existing Chrome; DESIGN.md describes the extension panel, not catalogue cards."
+      },
+      {
+        "rule": "overused-font",
+        "value": "*",
+        "files": [
+          "design-previews/card-states/index.html"
+        ],
+        "createdAt": "2026-11-02T14:00:18.324Z",
+        "reason": "Agent: native Rezka Arial is intentionally preserved in this simulation, not a new brand font choice."
+      }
+    ]
+  }
 }

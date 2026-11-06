@@ -1,0 +1,26 @@
+.backup-dialog { width:calc(100% - 24px); max-width:460px; max-height:calc(100dvh - 24px); margin:auto; padding:20px; overflow-y:auto; color:var(--ink); background:var(--surface); border:1px solid var(--line); border-radius:var(--radius-panel); font:inherit; }
+.backup-dialog::backdrop { background:#222a3b66; }
+.backup-heading { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.backup-heading h2 { margin:0; font-size:var(--text-title); font-weight:600; }
+.backup-heading .icon-button { margin-right:-10px; }
+.backup-dialog p { margin:8px 0 12px; color:var(--muted); }
+.backup-dialog h3 { margin:0 0 8px; font-size:var(--text-body); font-weight:600; }
+.backup-import { margin-top:20px; padding-top:20px; border-top:1px solid var(--line); }
+.backup-action { min-height:44px; padding:9px 14px; border:1px solid var(--control-border); border-radius:var(--radius-control); background:var(--surface); font-weight:600; }
+.backup-action:hover { background:var(--hover-surface); }
+.backup-primary { background:var(--accent); border-color:var(--accent); color:var(--surface); }
+.backup-primary:hover { background:var(--accent-hover); }
+.backup-preview { margin-top:16px; }
+#backup-filename { display:block; overflow-wrap:anywhere; font-weight:600; }
+#backup-meta { font-size:var(--text-small); }
+.backup-choices { margin:16px 0; padding:0; border:0; min-width:0; }
+.backup-choices legend { padding:0 0 8px; font-weight:600; }
+.backup-choice { display:flex; align-items:center; gap:10px; min-height:44px; padding:8px 0; border-bottom:1px solid var(--line); cursor:pointer; }
+.backup-choice input { width:18px; height:18px; margin:0; flex-shrink:0; accent-color:var(--accent); }
+.backup-choice span { flex:1; min-width:0; }
+.backup-choice output { color:var(--muted); font-size:var(--text-small); }
+.backup-dialog .backup-note { font-size:var(--text-small); }
+#backup-status { margin:16px 0 0; overflow-wrap:anywhere; color:var(--success); }
+#backup-status:empty { margin:0; }
+#backup-status[data-error="true"] { color:var(--error-ink); }
+.header-actions { display:flex; flex-shrink:0; }

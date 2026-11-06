@@ -39,7 +39,7 @@ test('new movie and series marks create a native save, then mark it using its re
             return '{"success":true}';
         });
         const result = await h.api.setWatched('https://rezka.ag' + path, true);
-        assert.ok(result.has('42'));
+        assert.ok(result.watched.has('42'));
         assert.equal(h.w.untrustedRan, undefined, 'fetched scripts must never run');
         assert.deepEqual(payload, { post_id: '42', translator_id: '111', season: kind === 'Series' ? '3' : '0',
             episode: kind === 'Series' ? '8' : '0', current_time: '0', duration: '0' });
@@ -58,7 +58,7 @@ test('existing saves preserve progress; explicit desired state avoids stale-card
     assert.equal(h.calls.filter(c => c.options.method === 'POST').length, 0, 'already watched stays watched');
     assert.equal(h.calls.length, 1, 'a fresh history read already confirms an unchanged mark');
     const result = await h.api.setWatched(path, false);
-    assert.equal(result.has('42'), false);
+    assert.equal(result.watched.has('42'), false);
     assert.equal(h.calls.filter(c => c.options.method === 'POST').length, 2, 'all saves of the same title are unmarked');
     assert.ok(h.calls.every(c => !c.url.includes('send_save')));
 });
@@ -70,7 +70,7 @@ test('an ambiguous POST is reconciled without a second toggle', async t => {
         entries[0].watched = true;
         throw new Error('Connection lost after commit');
     });
-    assert.ok((await h.api.setWatched(path, true)).has('42'));
+    assert.ok((await h.api.setWatched(path, true)).watched.has('42'));
     assert.equal(h.calls.filter(c => c.options.method === 'POST').length, 1);
     assert.equal(h.calls.length, 3, 'the reconciliation read is already the confirmation');
 });
@@ -102,7 +102,7 @@ test('new-title metadata overlaps the fresh history read without creating a save
         const prepared = h.calls.some(call => call.url.endsWith('.html'));
         const prematurePosts = h.calls.filter(call => call.options.method === 'POST').length;
         releaseHistory();
-        assert.ok((await action).has('42'));
+        assert.ok((await action).watched.has('42'));
         assert.equal(prepared, true, 'metadata starts before the history request finishes');
         assert.equal(prematurePosts, 0, 'fresh history remains required before any account write');
         assert.equal(h.calls.filter(call => call.url.includes('send_save')).length, appeared ? 0 : 1);

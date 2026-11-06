@@ -3,35 +3,27 @@ const content = $('#content');
 const sectionCopy = {
     view: ['Под ваш экран', 'Оформление сайта, в котором удобно смотреть.'],
     player: ['Ваш способ смотреть', 'Качество видео, размер плеера, серии и управление.'],
-    hide: ['Оставьте главное', 'Уберите отвлекающие блоки и сверните лишнее.'],
     myshows: ['MyShows', 'Автоматические отметки, очередь и история синхронизации.']
 };
 const copy = {
     'content-size': ['view', 'Ширина страницы', ''],
     font: ['view', 'Шрифт сайта', ''],
     styles: ['view', 'Улучшенное оформление', 'Аккуратные отступы, кнопки и блоки'],
-    'dim-watched': ['view', 'Приглушать просмотренное', 'Бледные карточки и названия по всему сайту — по отметкам в «Досмотреть»'],
+    'dim-watched': ['view', 'Различать статусы просмотра', 'Смотрю — золотистый постер. Просмотренное — бледные карточки и названия. По записям в «Досмотреть»'],
     imdb: ['view', 'Рейтинги IMDb', 'Оценки на карточках фильмов и сериалов'],
     'navbar-links': ['view', 'Разделы каталога открывать', ''],
+    'search-candidate-limit': ['view', 'Лимит проверки карточек', 'В расширенном поиске за один запуск. Затем можно продолжить. Больший лимит — дольше поиск. Изменения действуют со следующего запуска или продолжения'],
     'theme-color-black': ['view', 'Чёрная панель браузера', 'Для браузеров с поддержкой цвета страницы'],
     'player-max-quality': ['player', 'Всегда максимальное качество', 'Лучшее доступное для каждого видео и озвучки: 4K, 2K, 1080p Ultra и ниже'],
-    'player-scale': ['player', 'Масштаб плеера', 'Увеличение видео и элементов управления'],
     'player-no-margin': ['player', 'Плеер без боковых отступов', 'На всю ширину блока просмотра'],
     'player-top-bar': ['player', 'Название поверх видео', 'Название фильма, сезон и номер серии'],
     'player-extra-controls': ['player', 'Дополнительные кнопки', 'Перемотка, серии и разворачивание'],
-    'player-triple-click': ['player', 'Тройной клик для смены серии', 'По левой или правой части видео'],
-    'player-full-page': ['player', 'Разворачивать при воспроизведении', 'Плеер занимает всю страницу'],
     'auto-play-next': ['player', 'Переход к следующей серии', ''],
     'player-cover': ['player', 'Обложка до начала просмотра', 'Постер фильма вместо пустого плеера'],
     hotkeys: ['player', 'Горячие клавиши', 'Работают, даже когда плеер не в фокусе'],
-    'snap-scroll': ['player', 'Прилипание прокрутки к плееру', 'Останавливать прокрутку у начала видео'],
-    'snap-scroll-onload': ['player', 'Сразу прокручивать к плееру', 'При открытии страницы фильма'],
-    'hide-ads': ['hide', 'Скрывать рекламные блоки', 'Реклама в баннерах и вставках на странице'],
-    'hide-player-ads': ['hide', 'Отключать рекламу в плеере', 'Реклама перед началом просмотра'],
-    'hide-info': ['hide', 'Сворачивать описание', 'Информация о фильме под заголовком'],
-    'comments-hide': ['hide', 'Сворачивать отзывы', 'Отзывы остаются доступны по нажатию'],
-    'more-hide': ['hide', 'Сворачивать рекомендации', 'Блок «Смотреть ещё»'],
-    translators: ['hide', 'Сворачивать список переводов', 'Показывать только выбранный перевод']
+    'hide-ads': ['view', 'Скрывать рекламные блоки', 'Реклама в баннерах и вставках на странице'],
+    'hide-player-ads': ['view', 'Отключать рекламу в плеере', 'Реклама перед началом просмотра'],
+    'comments-hide': ['view', 'Сворачивать отзывы', 'Отзывы остаются доступны по нажатию']
 };
 let data = {}, configs = [], section = 'view', targetTab = null, connected = false;
 let refreshId = 0, searchAnnouncement;
@@ -184,13 +176,12 @@ function widthControl(config) {
 function settingRow(config) {
     const [, label, description] = details(config);
     const binary = config.options.length === 2 && config.options.every(option => ['Выкл', 'Вкл'].includes(option.text));
-    const radio = config.name === 'player-scale';
     const id = 'setting-' + config.name;
     const row = el(binary ? 'label' : 'div', binary ? 'setting setting-toggle' : 'setting');
     const text = el('span', 'setting-text');
-    const title = el(binary || radio ? 'span' : 'label', 'setting-name', label);
+    const title = el(binary ? 'span' : 'label', 'setting-name', label);
     title.id = id + '-label';
-    if (!binary && !radio) title.htmlFor = id;
+    if (!binary) title.htmlFor = id;
     text.append(title);
     if (description) {
         const help = el('span', 'setting-description', description);
@@ -209,24 +200,17 @@ function settingRow(config) {
         row.append(input);
     } else {
         row.classList.add('stacked');
-        if (radio) {
-            const group = segments(config, label);
-            if (description) group.setAttribute('aria-describedby', id + '-description');
-            row.append(group);
-        }
-        else {
-            const select = el('select');
-            select.id = id;
-            if (description) select.setAttribute('aria-describedby', id + '-description');
-            select.dataset.setting = config.name;
-            config.options.forEach((option, index) => {
-                const item = el('option', '', optionText(config, index));
-                item.value = index;
-                select.append(item);
-            });
-            select.addEventListener('change', () => save(config, Number(select.value)));
-            row.append(select);
-        }
+        const select = el('select');
+        select.id = id;
+        if (description) select.setAttribute('aria-describedby', id + '-description');
+        select.dataset.setting = config.name;
+        config.options.forEach((option, index) => {
+            const item = el('option', '', optionText(config, index));
+            item.value = index;
+            select.append(item);
+        });
+        select.addEventListener('change', () => save(config, Number(select.value)));
+        row.append(select);
     }
     return row;
 }
@@ -304,7 +288,7 @@ function render() {
         const width = selected.find(config => config.name === 'content-size');
         content.append(widthControl(width));
         selected = selected.filter(config => config !== width);
-        const order = ['styles', 'imdb', 'font', 'navbar-links', 'theme-color-black'];
+        const order = ['styles', 'imdb', 'font', 'navbar-links', 'theme-color-black', 'search-candidate-limit'];
         selected.sort((a, b) => order.indexOf(a.name) - order.indexOf(b.name));
     }
     for (const config of selected) content.append(settingRow(config));
@@ -349,6 +333,9 @@ document.addEventListener('keydown', event => {
 });
 $('#search-shortcut').textContent = navigator.platform.startsWith('Mac') ? '⌘ F' : 'Ctrl F';
 $('#help-button').addEventListener('click', () => chrome.runtime.openOptionsPage());
+document.addEventListener('rezka:backup-restored', () => {
+    refreshConnection().catch(() => notice('Не удалось проверить применение настроек. Откройте панель заново.', false, true));
+});
 $('#reload-button').addEventListener('click', async () => {
     if (!targetTab?.id) return;
     try { await chrome.tabs.reload(targetTab.id); }

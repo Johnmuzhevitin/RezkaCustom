@@ -6,6 +6,8 @@
     let video = null, lastFlush = 0, generation = 0, lastKey = '', lastSource = '', waitingSource = null;
     let positionSeconds = 0, lastDuration = 0, advancing = false;
     const pending = new Map(), finished = new Set();
+    let trackingEpochs = new Map();
+    const currentBatch = (key, batch) => batch.trackingEpoch === trackingEpochs.get(key);
     const text = selector => document.querySelector(selector)?.textContent.trim() || '';
     function identity() {
         const active = document.querySelector('.b-simple_episode__item.active');
@@ -45,13 +47,17 @@
         flushing = true;
         try {
             for (const [key, batch] of [...pending]) {
+                if (!currentBatch(key, batch)) continue;
                 pending.delete(key);
                 try {
                     const reply = await chrome.runtime.sendMessage({ type: 'myshows:progress', account: batch.account,
-                        episode: batch.episode, duration: batch.duration, ranges: batch.ranges, confirmedPosition: batch.confirmedPosition });
+                        episode: batch.episode, duration: batch.duration, ranges: batch.ranges, confirmedPosition: batch.confirmedPosition,
+                        trackingEpoch: batch.trackingEpoch });
+                    if (!currentBatch(key, batch)) continue;
                     if (!reply?.ok) throw new Error('save');
                     if (reply.tracking === false) { finished.add(key); pending.delete(key); }
                 } catch {
+                    if (!currentBatch(key, batch)) continue;
                     const newer = pending.get(key);
                     if (newer && Math.abs(newer.duration - batch.duration) <= 5) {
                         newer.ranges = M.mergeRanges([...batch.ranges, ...newer.ranges], newer.duration);
@@ -100,7 +106,8 @@
         previous = current;
         if (range) {
             let batch = pending.get(batchKey);
-            if (!batch) { batch = { account: config.account, episode, duration: video.duration, ranges: [], confirmedPosition: 0 }; pending.set(batchKey, batch); }
+            if (!batch) { batch = { account: config.account, episode, duration: video.duration, ranges: [], confirmedPosition: 0,
+                trackingEpoch: trackingEpochs.get(batchKey) }; pending.set(batchKey, batch); }
             if (Math.abs(batch.duration - video.duration) > 5) { batch.ranges = []; batch.confirmedPosition = 0; }
             batch.duration = video.duration;
             batch.ranges = M.mergeRanges([...batch.ranges, range], video.duration);
@@ -112,6 +119,15 @@
         const next = { enabled: !!state?.enabled && state?.connection === 'connected', account: state?.account || '' };
         if (next.account !== config.account || next.enabled !== config.enabled) { flush(); reset(); }
         config = next;
+        const epochs = new Map((state?.entries || []).filter(entry => entry.trackingEpoch)
+            .map(entry => [entry.account + ':' + entry.key, entry.trackingEpoch]));
+        for (const key of new Set([...trackingEpochs.keys(), ...epochs.keys()])) {
+            if (trackingEpochs.get(key) === epochs.get(key)) continue;
+            // Invalidate buffered samples and late replies, including in other tabs.
+            pending.delete(key); finished.delete(key);
+            if (key === config.account + ':' + lastKey) reset();
+        }
+        trackingEpochs = epochs;
         // A cancelled, unsent episode can return to tracking without reloading the player.
         for (const entry of state?.entries || []) {
             if (entry.account === config.account && entry.status === 'watching' && !entry.submittedAt

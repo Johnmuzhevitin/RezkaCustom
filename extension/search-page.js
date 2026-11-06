@@ -6,6 +6,11 @@
     cardStyle.textContent = REZKA_CARD_CSS;
     document.head.append(cardStyle);
     const S = RezkaSearch;
+    S.learnOptions(document, location.href);
+    // Visiting a title enriches suggestions without another network request.
+    if (S.cardURL(location.href, location.origin)) {
+        try { S.rememberDetails(location.href, S.parseDetails(document.documentElement.outerHTML, location.href)); } catch { /* A restricted title is not metadata. */ }
+    }
     const isDedicated = () => (new URLSearchParams(location.hash.slice(1)).get('rc-search') === '1'
         || new URL(location.href).searchParams.get('rc-search') === '1') && location.pathname === '/search/';
     function addEntry() {
@@ -42,6 +47,7 @@
         host.id = 'rc-search-root'; host.hidden = true;
         const root = host.attachShadow({ mode: 'open' });
         if (typeof RezkaWatched !== 'undefined') RezkaWatched.registerRoot(root);
+        if (typeof RezkaExclusionsSite !== 'undefined') RezkaExclusionsSite.registerRoot(root, { showExcluded: () => !!search?.showExcluded });
         const outerStyle = document.createElement('style');
         outerStyle.textContent = `body.rc-search-page .b-content > :not(#rc-search-root),
             body.rc-search-page #main > .b-newest_slider_wrapper,
@@ -89,7 +95,9 @@
             <form id="search-form" class="search-layout">
                 <div class="query-row"><label class="query-label" for="query">Название фильма или сериала</label><div class="query-controls">
                     <input id="query" name="q" type="search" placeholder="Например, Матрица" maxlength="200" autocomplete="off">
-                    <button class="primary" type="submit">Найти</button></div></div>
+                    <button class="primary" type="submit">Найти</button></div>
+                    <div id="preset-controls" class="preset-controls"></div>
+                    <p id="preset-notice" class="field-help" role="status" aria-live="polite"></p></div>
                 <aside class="filters" aria-label="Фильтры поиска">
                     <div class="filter-heading"><h2>Фильтры</h2><button type="button" id="reset" class="text-button">Сбросить</button></div>
                     <label for="type">Тип</label><select id="type" name="type"><option value="">Все типы</option></select>
@@ -100,24 +108,35 @@
                     </div></fieldset>
                     <label for="country">Страна</label><input id="country" name="country" aria-describedby="country-help" maxlength="80" placeholder="Любая страна" autocomplete="off" spellcheck="false">
                     <p id="country-help" class="field-help">Выберите страну или начните вводить название.</p>
+                    <div id="extra-filters" class="extra-filters"></div>
+                    <button type="button" id="add-filter" class="add-filter">+ Добавить фильтр</button>
+                    <button type="button" id="advanced-filter" class="advanced-filter">Сложные условия</button>
                     <button class="apply" type="submit">Применить фильтры</button>
-                    <p id="draft-note" class="field-help" hidden>Фильтры изменены. Нажмите «Применить».</p>
+                    <p id="draft-note" class="field-help" hidden>Фильтры изменены. Нажмите «Применить фильтры».</p>
                 </aside>
                 <section class="results" aria-labelledby="results-heading">
-                    <div class="results-toolbar"><h2 id="results-heading">Результаты</h2><div class="sort-field"><label for="sort">Порядок</label><select id="sort" name="sort"></select></div></div>
+                    <div class="results-toolbar"><h2 id="results-heading">Результаты</h2><div class="sort-group">
+                        <div class="sort-field"><label for="sort">Порядок</label><select id="sort" name="sort"></select></div>
+                        <p id="sort-pending" class="field-help" role="status" hidden></p>
+                    </div></div>
                     <p id="sort-note" class="field-help" hidden>При поиске по названию сохраняется порядок результатов HDrezka.</p>
                     <div id="active-filters" class="active-filters" aria-label="Применённые фильтры"></div>
-                    <p id="status" class="status" role="status" aria-live="polite" aria-atomic="true" tabindex="-1"></p>
+                    <div id="advanced-summary" class="advanced-summary" hidden></div>
+                    <div class="search-progress"><p id="status" class="status" role="status" aria-live="polite" aria-atomic="true" tabindex="-1"></p>
+                        <div class="progress-actions" role="group" aria-label="Управление поиском над результатами">
+                            <button id="more-top" type="button" class="text-button">Продолжить поиск</button><button id="stop-top" type="button" class="text-button" hidden>Остановить загрузку</button>
+                        </div></div>
                     <div id="error" class="error" role="alert" hidden></div>
                     <div id="cards" class="cards" aria-busy="false"></div>
                     <div id="empty" class="empty" hidden><h3>Совпадений пока нет</h3><p></p></div>
-                    <div class="load-actions"><button id="more" type="button" class="primary">Показать ещё</button><button id="stop" type="button" hidden>Остановить загрузку</button></div>
+                    <div class="load-actions" role="group" aria-label="Управление поиском после результатов"><button id="more" type="button" class="primary">Показать ещё</button><button id="stop" type="button" hidden>Остановить загрузку</button></div>
                     <p class="source-note">Результаты из каталога HDrezka. Сочетания фильтров проверяются по мере загрузки страниц.</p>
                 </section>
             </form>`;
         root.append(shell); container.prepend(host);
         const $ = selector => root.querySelector(selector);
         const form = $('#search-form');
+        const loadControls = [{ more: $('#more-top'), stop: $('#stop-top') }, { more: $('#more'), stop: $('#stop') }];
         // Keep the site's player shortcuts away from form controls.
         root.addEventListener('keydown', event => event.stopPropagation());
         function option(select, value, label) {
@@ -128,7 +147,7 @@
         const nativeGenres = new Map();
         for (const select of document.querySelectorAll('select.select-category')) {
             for (const item of select.options) {
-                const match = item.value.match(/^\/(films|series|cartoons|animation)\/best\/([^/]+)\/$/);
+                const match = item.value.match(/^\/(films|series|cartoons|animation|show)\/best\/([^/]+)\/$/);
                 if (!match || !Object.hasOwn(S.GENRES, match[2])) continue;
                 if (!nativeGenres.has(match[1])) nativeGenres.set(match[1], new Set());
                 nativeGenres.get(match[1]).add(match[2]);
@@ -136,7 +155,7 @@
         }
         const countries = new Set(S.COUNTRIES);
         for (const link of document.querySelectorAll('a[href*="/country/"]')) if (link.textContent.trim()) countries.add(link.textContent.trim());
-        const countryNames = [...countries].sort((a, b) => a.localeCompare(b, 'ru'));
+        const countryNames = () => [...new Set([...countries, ...S.suggestions('country')])].sort((a, b) => a.localeCompare(b, 'ru'));
         const pickers = new Map();
         const choiceKey = value => value.trim().toLocaleLowerCase('ru').replaceAll('ё', 'е');
         // One popup and keyboard implementation for fixed choices and free country text.
@@ -164,8 +183,8 @@
             popup.append(list, empty); field.append(toggle, popup);
             input.setAttribute('aria-controls', list.id); toggle.setAttribute('aria-controls', list.id);
             let choices = [], index = -1, typed = '', typedAt = 0;
-            const values = () => freeText ? [['', 'Любая страна'], ...countryNames.map(name => [name, name])] : [...source.options].map(item => [item.value, item.textContent]);
-            const resetLabel = () => { if (!freeText) input.value = source.selectedOptions[0]?.textContent || ''; };
+            const values = () => freeText ? [['', 'Любая страна'], ...countryNames().map(name => [name, name])] : [...source.options].map(item => [item.value, item.textContent]);
+            const resetLabel = () => { if (!freeText) input.value = id === 'sort' && source.disabled ? 'Порядок HDrezka' : source.selectedOptions[0]?.textContent || ''; };
             function close() {
                 popup.hidden = true; index = -1; typed = '';
                 input.setAttribute('aria-expanded', 'false'); input.removeAttribute('aria-activedescendant');
@@ -266,31 +285,71 @@
         for (const id of ['from', 'to']) $('#' + id).max = String(new Date().getFullYear() + 5);
         function genres(type, selected) {
             $('#genre').replaceChildren(); option($('#genre'), '', 'Любой жанр');
-            const entries = Object.entries(S.GENRES).filter(([slug]) => !type || !nativeGenres.has(type) || nativeGenres.get(type).has(slug));
+            const entries = Object.entries(S.GENRES).filter(([slug]) => !type || !nativeGenres.has(type) || nativeGenres.get(type).has(slug) || S.genreTypes.get(type)?.has(slug));
+            if (selected && !Object.hasOwn(S.GENRES, selected)) entries.push([selected, selected]);
             for (const [slug, name] of entries.sort((a, b) => a[1].localeCompare(b[1], 'ru'))) option($('#genre'), slug, name);
             $('#genre').value = entries.some(([slug]) => slug === selected) ? selected : '';
             pickers.get('genre').close(); pickers.get('genre').sync();
         }
-        let active = S.readState(location.href), search, controller, generation = 0, rendered = 0, failed = false, stopped = false;
-        const cachePrefix = 'rc-search:v1:';
+        let active = S.normalize({}), search, controller, generation = 0, rendered = 0, failed = false, stopped = false;
+        const editor = RezkaSearchEditor.create({ root, changed: updateDraft, apply: advanced => submit({ advanced }), base, validateBase, fillBase: fill,
+            removeAdvanced: () => {
+                editor.removeAppliedAdvanced(active.advanced);
+                start({ ...active, advanced: null }, true, false, true); $('#advanced-filter').focus();
+            } });
+        const cachePrefix = 'rc-search:v2:';
+        let genreRevision = S.genreVersion();
+        S.subscribeOptions(() => {
+            if (genreRevision === S.genreVersion() || root.activeElement?.closest('.picker-field')) return;
+            genreRevision = S.genreVersion(); genres($('#type').value, $('#genre').value);
+        });
         const cacheKey = () => cachePrefix + S.pageURL(active, location.origin);
-        function draft() {
+        function base() {
             const values = Object.fromEntries(new FormData(form));
             values.sort = $('#sort').value;
-            return S.normalize(values);
+            return values;
+        }
+        function validateBase() {
+            const values = base(), country = values.country.trim();
+            $('#to').setCustomValidity(values.from && values.to && +values.from > +values.to
+                ? 'Год «До» должен быть не меньше года «От».' : '');
+            $('#country').setCustomValidity(country && !/^[\p{L}\p{M}][\p{L}\p{M}\s()'’.-]*$/u.test(country)
+                ? 'Введите название страны, например США или Великобритания.' : '');
+            const invalid = ['query', 'from', 'to', 'country'].map(id => $('#' + id)).find(control => !control.checkValidity());
+            if (!invalid) return true;
+            invalid.focus(); invalid.reportValidity(); return false;
+        }
+        function draft(overrides = {}) {
+            return S.normalize({ ...base(), ...editor.read(), ...overrides });
+        }
+        function hasDraft(overrides = {}) {
+            try { return editor.pending() || JSON.stringify(draft(overrides)) !== JSON.stringify(active); }
+            catch { return true; }
         }
         function updateDraft() {
             $('#to').setCustomValidity(''); $('#country').setCustomValidity('');
+            if ($('#error').dataset.kind === 'validation') $('#error').hidden = true;
             const q = $('#query').value.trim();
             $('#sort').disabled = Boolean(q); $('#sort-note').hidden = !q;
+            $('#sort-note').textContent = q && q !== active.q
+                ? 'После поиска по названию будет применён порядок HDrezka. Сейчас показаны результаты предыдущего поиска.'
+                : 'При поиске по названию сохраняется порядок результатов HDrezka.';
             pickers.get('sort').sync();
-            $('#draft-note').hidden = JSON.stringify(draft()) === JSON.stringify(active);
+            const pendingSort = !q && $('#sort').value !== active.sort;
+            const sortMessage = pendingSort ? 'Применится вместе с фильтрами.' : '';
+            if ($('#sort-pending').textContent !== sortMessage) $('#sort-pending').textContent = sortMessage;
+            $('#sort-pending').hidden = !pendingSort;
+            const sortDescription = q ? 'sort-note' : pendingSort ? 'sort-pending' : '';
+            if (sortDescription) pickers.get('sort').input.setAttribute('aria-describedby', sortDescription);
+            else pickers.get('sort').input.removeAttribute('aria-describedby');
+            $('#draft-note').hidden = !hasDraft();
         }
         function fill(state) {
             for (const picker of pickers.values()) picker.close();
             $('#query').value = state.q; $('#type').value = state.type;
             genres(state.type, state.genre);
             for (const key of ['from', 'to', 'country', 'sort']) $('#' + key).value = state[key];
+            editor.fill(state);
             for (const picker of pickers.values()) picker.sync();
             updateDraft();
         }
@@ -315,13 +374,33 @@
                 icon.setAttribute('viewBox', '0 0 16 16'); icon.setAttribute('aria-hidden', 'true');
                 const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
                 path.setAttribute('d', 'M4 4l8 8M12 4l-8 8'); icon.append(path); button.append(icon);
-                button.addEventListener('click', () => { const next = { ...active, [key]: '' }; start(next, true); $('#query').focus(); });
+                button.addEventListener('click', () => {
+                    // Only clear the form value when it still represents this applied chip.
+                    // Other edits, including invalid or uncommitted input, stay in the DOM.
+                    if (base()[key] === active[key]) {
+                        $('#' + (key === 'q' ? 'query' : key)).value = '';
+                        if (key === 'type') genres('', $('#genre').value);
+                        pickers.get(key)?.sync();
+                    }
+                    start({ ...active, [key]: '' }, true, false, true); $('#query').focus();
+                });
                 target.append(button);
             }
+            active.extra.forEach((rule, index) => {
+                const button = document.createElement('button'); button.type = 'button'; button.className = 'chip';
+                button.textContent = editor.describe(rule) + ' ×'; button.setAttribute('aria-label', 'Убрать фильтр: ' + editor.describe(rule));
+                button.addEventListener('click', () => {
+                    editor.removeAppliedExtra(rule);
+                    start({ ...active, extra: active.extra.filter((_, i) => i !== index) }, true, false, true); $('#add-filter').focus();
+                });
+                target.append(button);
+            });
+            editor.renderApplied(active);
         }
         function appendCards() {
             for (const item of search.items.slice(rendered)) {
                 const card = document.createElement('article'); card.className = 'card';
+                if (!visibleItem(item)) card.classList.add('rc-excluded');
                 const link = document.createElement('a'); link.href = S.cardURL(item.url, location.origin); link.className = 'card-link';
                 const poster = document.createElement('div'); poster.className = 'poster';
                 const imageURL = S.safeURL(item.image, location.origin, false);
@@ -335,30 +414,53 @@
                 link.append(poster, type, title); card.append(link, info);
                 if (item.additional) { const extra = document.createElement('p'); extra.textContent = 'Также: ' + item.additional; card.append(extra); }
                 if (item.episode) { const episode = document.createElement('p'); episode.className = 'episode'; episode.textContent = item.episode; card.append(episode); }
+                for (const text of RezkaSearchEditor.cardFacts(item, active)) {
+                    const fact = document.createElement('p'); fact.className = 'card-fact'; fact.textContent = text; card.append(fact);
+                }
                 $('#cards').append(card);
             }
             rendered = search.items.length;
         }
+        function visibleItem(item) { return search.showExcluded || typeof RezkaExclusions === 'undefined' || !RezkaExclusions.has(item.id); }
         function render() {
             appendCards();
-            const count = search.items.length;
+            const count = search.items.filter(visibleItem).length;
             $('#results-heading').textContent = count ? 'Найдено: ' + count : 'Результаты';
             let message = search.busy ? 'Ищем совпадения… ' : search.done ? 'Поиск завершён. ' : stopped ? 'Загрузка остановлена. ' : '';
+            if (!search.busy && !search.done && !stopped && !failed) {
+                if (search.pauseReason === 'budget') message = `Проверены очередные ${search.batchLimit.toLocaleString('ru-RU')} позиций. `;
+                else if (search.pauseReason === 'stalled') message = 'Пауза: сайт вернул 50 страниц подряд без новых позиций. ';
+            }
             message += `Проверено: ${search.scanned}. Страниц: ${search.pages}.`;
+            if (search.unknown) message += ` Недостаточно данных: ${search.unknown}.`;
             if (!search.done && !search.busy) message += ' Это ещё не вся выдача.';
             if ($('#status').textContent !== message) $('#status').textContent = message;
             $('#cards').setAttribute('aria-busy', String(search.busy));
             // Keep the active button in the tab order while a batch is loading.
-            $('#more').hidden = !search.busy && search.done;
-            $('#more').setAttribute('aria-disabled', String(search.busy));
-            $('#more').textContent = search.busy ? 'Загружаем…' : failed ? 'Повторить загрузку' : !count || stopped ? 'Продолжить поиск' : 'Показать ещё';
-            $('#stop').hidden = !search.busy;
+            for (const controls of loadControls) {
+                controls.more.hidden = !search.busy && search.done;
+                controls.more.setAttribute('aria-disabled', String(search.busy));
+                controls.more.textContent = search.busy ? 'Загружаем…' : failed ? 'Повторить загрузку'
+                    : controls.more === $('#more-top') || !count || stopped ? 'Продолжить поиск' : 'Показать ещё';
+                controls.stop.hidden = !search.busy;
+            }
             $('#empty').hidden = Boolean(count) || search.busy || failed;
             $('#empty h3').textContent = search.done ? 'Ничего не найдено' : 'Совпадений пока нет';
-            $('#empty p').textContent = search.done ? 'Попробуйте другое название или уберите часть фильтров.' : 'В проверенной части каталога нет совпадений. Продолжите поиск или измените фильтры.';
+            $('#empty p').textContent = count === 0 && search.items.length
+                ? 'Все найденные карточки исключены. Вернуть их можно на сайте: Настройки профиля → Исключения.'
+                : search.done ? 'Попробуйте другое название или уберите часть фильтров.' : 'В проверенной части каталога нет совпадений. Продолжите поиск или измените фильтры.';
         }
+        let personalTimer;
+        function personalChanged() {
+            if (!search?.usesPersonal || !search.personal || host.hidden || personalTimer) return;
+            personalTimer = setTimeout(() => { personalTimer = undefined; start(active, false, false, true); }, 80);
+        }
+        if (typeof RezkaExclusions !== 'undefined') RezkaExclusions.subscribe(() => { if (search) { personalChanged(); render(); } });
+        if (typeof chrome !== 'undefined') chrome.storage.onChanged.addListener((changes, area) => {
+            if (area === 'local' && changes['ui:watched-revision']) personalChanged();
+        });
         async function load({ focusResults = false } = {}) {
-            if (search.busy || search.done) return;
+            if (!search || search.busy || search.done) return;
             controller = new AbortController();
             const token = generation, current = search, signal = controller.signal, firstNew = search.items.length;
             failed = false; stopped = false; $('#error').hidden = true;
@@ -372,32 +474,37 @@
             try { await task; }
             catch (error) {
                 if (token !== generation) return;
-                if (!signal.aborted) { failed = true; $('#error').textContent = error.message; $('#error').hidden = false; }
+                if (!signal.aborted) { failed = true; $('#error').dataset.kind = 'network'; $('#error').textContent = error.message; $('#error').hidden = false; }
             } finally {
                 if (token === generation) {
                     const focused = root.activeElement;
+                    const controls = loadControls.find(pair => pair.more === focused || pair.stop === focused);
                     render();
-                    const firstLink = $('#cards').children[firstNew]?.querySelector('.card-link');
+                    const firstVisible = search.items.findIndex((item, index) => index >= firstNew
+                        && visibleItem(item));
+                    const firstLink = $('#cards').children[firstVisible]?.querySelector('.card-link');
                     if (focused === $('#more') && focusResults && !failed && !stopped && firstLink) firstLink.focus();
-                    else if (focused === $('#stop') || (focused === $('#more') && search.done)) {
-                        (search.done ? firstLink || $('#status') : $('#more')).focus();
+                    else if (controls && (focused === controls.stop || search.done)) {
+                        (search.done ? (controls.more === $('#more') && firstLink) || $('#status') : controls.more).focus();
                     }
                     save();
                 }
             }
         }
-        function start(state, push = false, restore = false) {
+        function start(state, push = false, restore = false, preserveDraft = false) {
+            const next = S.normalize(state);
+            if (next.from && next.to && +next.from > +next.to) [next.from, next.to] = [next.to, next.from];
+            const url = S.pageURL(next, location.origin);
             save(); controller?.abort(); generation++;
-            active = S.normalize(state);
-            if (active.from && active.to && +active.from > +active.to) [active.from, active.to] = [active.to, active.from];
-            const url = S.pageURL(active, location.origin);
+            active = next;
             if (push && url !== location.href) history.pushState(null, '', url);
             else if (!push && url !== location.href) history.replaceState(null, '', url);
             routeURL = location.href;
             search = new S.Search(active, location.origin);
             rendered = 0; failed = false; stopped = false;
             $('#cards').replaceChildren(); $('#error').hidden = true;
-            fill(active); chips();
+            if (preserveDraft) updateDraft(); else fill(active);
+            chips();
             let saved;
             if (restore) {
                 try {
@@ -414,17 +521,26 @@
         form.addEventListener('input', updateDraft);
         $('#type').addEventListener('change', () => { genres($('#type').value, $('#genre').value); updateDraft(); });
         form.addEventListener('change', updateDraft);
-        form.addEventListener('submit', event => {
-            event.preventDefault();
-            const state = draft();
-            if (state.from && state.to && +state.from > +state.to) { $('#to').setCustomValidity('Год «До» должен быть не меньше года «От».'); $('#to').reportValidity(); return; }
-            if (state.country && !/^[\p{L}\p{M}][\p{L}\p{M}\s()'’.-]*$/u.test(state.country)) { $('#country').setCustomValidity('Введите название страны, например США или Великобритания.'); $('#country').reportValidity(); return; }
-            start(state, true);
+        function submit(overrides = {}) {
+            if (!validateBase()) return false;
+            try {
+                editor.flush();
+                const state = draft(overrides);
+                start(state, true); return true;
+            } catch (problem) {
+                if (!editor.validation(problem)) { $('#error').dataset.kind = 'validation'; $('#error').textContent = problem.message; $('#error').hidden = false; }
+                return false;
+            }
+        }
+        form.addEventListener('submit', event => { event.preventDefault(); submit(); });
+        $('#sort').addEventListener('change', () => {
+            if (!$('#query').value.trim() && !hasDraft({ sort: active.sort })) form.requestSubmit();
         });
-        $('#sort').addEventListener('change', () => { if (!$('#query').value.trim()) form.requestSubmit(); });
-        $('#reset').addEventListener('click', () => { start({}, true); $('#query').focus(); });
-        $('#more').addEventListener('click', () => void load({ focusResults: true }));
-        $('#stop').addEventListener('click', () => { stopped = true; controller?.abort(); });
+        $('#reset').addEventListener('click', () => { start({ q: $('#query').value }, true); $('#query').focus(); });
+        for (const controls of loadControls) {
+            controls.more.addEventListener('click', () => void load({ focusResults: controls.more === $('#more') }));
+            controls.stop.addEventListener('click', () => { stopped = true; controller?.abort(); });
+        }
         window.addEventListener('pagehide', () => { save(); controller?.abort(); });
         function theme() { host.dataset.theme = document.body.classList.contains('b-theme__template__night') ? 'dark' : 'light'; }
         theme(); new MutationObserver(theme).observe(document.body, { attributes: true, attributeFilter: ['class'] });
@@ -434,13 +550,23 @@
                 document.title = 'Расширенный поиск — HDrezka';
                 viewport.content = 'width=device-width, initial-scale=1';
                 if (!viewport.isConnected) document.head.append(viewport);
-                start(S.readState(location.href), false, true);
                 host.hidden = false;
+                try { start(S.readState(location.href), false, true); }
+                catch (problem) {
+                    controller?.abort(); generation++; search = undefined; rendered = 0;
+                    $('#cards').replaceChildren(); $('#active-filters').replaceChildren(); $('#advanced-summary').hidden = true;
+                    $('#results-heading').textContent = 'Результаты';
+                    $('#status').textContent = 'Поиск не запущен: проверьте условия в ссылке или сбросьте фильтры.';
+                    $('#error').textContent = problem.message; $('#error').hidden = false;
+                    for (const controls of loadControls) { controls.more.hidden = true; controls.stop.hidden = true; }
+                    $('#empty').hidden = true;
+                }
             },
             hide() {
                 if (host.hidden) return;
                 save(); controller?.abort(); generation++;
                 for (const picker of pickers.values()) picker.close();
+                editor.close();
                 host.hidden = true;
                 document.body.classList.remove('rc-search-page');
                 document.title = nativeTitle;

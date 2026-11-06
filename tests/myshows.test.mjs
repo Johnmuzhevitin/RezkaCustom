@@ -165,6 +165,60 @@ test('exact matches submit once, confirm only their own record, verify watched s
     assert.equal(w.tabs.size, 0);
 });
 
+test('a title without IMDb reaches MyShows matching instead of the identity dead end', async t => {
+    for (const kind of ['episode', 'movie']) await t.test(kind, async () => {
+        const media = M.validMedia({ ...episode, originalTitle: '', imdb: '', ...(kind === 'movie'
+            ? { kind, season: undefined, number: undefined } : {}) });
+        const idField = kind === 'movie' ? 'movieId' : 'episodeId';
+        const w = await worker({ rows: [entry({ episode: media, key: M.mediaKey(media) })],
+            response: { status: 200, data: { action: 'scrobble', match: 'exact', objectType: kind, objectId: 987 } },
+            reconcile: { ok: false, code: 'manual' } });
+        await until(() => w.state.entries[0].status === 'attention');
+        assert.equal(w.calls.length, 1, w.state.entries[0].reason);
+        const body = JSON.parse(w.calls[0].options.body);
+        assert.deepEqual(body[kind === 'movie' ? 'movie' : 'show'], { title: media.title, year: media.year, ids: {} });
+        assert.deepEqual(body.episode, kind === 'movie' ? undefined : { season: media.season, number: media.number });
+        assert.equal(w.state.entries[0].code, 'manual');
+        assert.equal(w.state.entries[0].exact, false);
+        assert.equal(w.state.entries[0][idField], undefined, 'a title-only guess must not pin the user to a wrong match');
+        assert.equal(w.messages.find(m => m.type === 'myshows:site-reconcile').allowApprove, false);
+        await w.send({ type: 'myshows:retry', id: 'test-entry' });
+        await until(() => w.state.entries[0].status === 'attention');
+        assert.equal(w.calls.length, 1, 'pending native confirmation must not send a duplicate');
+
+        const restarted = await worker({ values: w.values, reconcile: { ok: true, [idField]: 654, approved: true } });
+        await restarted.send({ type: 'myshows:retry', id: 'test-entry' });
+        await until(() => restarted.state.entries[0].status === 'done');
+        assert.equal(restarted.calls.length, 0);
+        assert.equal(restarted.state.entries[0][idField], 654, 'accept the corrected native match after manual confirmation');
+        assert.equal(restarted.messages.find(m => m.type === 'myshows:site-reconcile').allowApprove, false);
+        assert.ok(restarted.messages.some(m => m.type === 'myshows:site-verify' && m[idField] === 654));
+    });
+});
+
+test('retry recovers a saved missing-IMDb error while automatic marks stay paused', async () => {
+    const old = entry({ episode: { ...episode, imdb: '' }, status: 'attention', code: 'identity', manualAt: 1,
+        reason: 'На странице нет идентификатора IMDb. Автоматическое сопоставление недоступно.' });
+    const w = await worker({ enabled: false, rows: [old], reconcile: { ok: false, code: 'manual' } });
+    assert.equal(w.calls.length, 0);
+    await w.send({ type: 'myshows:retry', id: old.id });
+    await until(() => w.state.entries[0].code === 'manual');
+    assert.equal(w.calls.length, 1);
+    assert.equal(w.state.enabled, false);
+    assert.equal(w.state.entries[0].id, old.id);
+    assert.equal(w.state.entries[0].source, old.source);
+    assert.equal(JSON.parse(w.calls[0].options.body).progress, 100);
+});
+
+test('title matching requires a release year when IMDb is missing', async () => {
+    const w = await worker({ rows: [entry({ episode: { ...episode, imdb: '', year: undefined } })] });
+    await until(() => w.state.entries[0].status === 'attention');
+    assert.equal(w.state.entries[0].code, 'identity');
+    assert.match(w.state.entries[0].reason, /название и год/);
+    assert.equal(w.state.entries[0].submittedAt, undefined);
+    assert.equal(w.calls.length, 0);
+});
+
 test('unreadable POST response reconciles without approving an unverified match or resubmitting', async () => {
     const w = await worker({ response: () => { throw new Error('socket lost after commit'); }, reconcile: { ok: false, code: 'manual' } });
     await until(() => w.state.entries[0].status === 'attention');
@@ -531,6 +585,25 @@ test('real tracker extracts IMDb and sends viewed intervals, excluding seek-to-e
     assert.equal(sent[0].episode.number, 2);
     assert.ok(M.percent(sent.flatMap(item => item.ranges), 1000) <= 1);
     assert.ok(sent.every(item => item.confirmedPosition === 0));
+});
+
+test('real tracker queues a series with no IMDb or original title for native MyShows matching', async t => {
+    const w = await worker({ rows: [], reconcile: { ok: false, code: 'manual' } });
+    const sender = { id: 'extension-id', tab: { id: 10 }, frameId: 0, url: 'https://rezka.fi/series/test/123-example.html' };
+    const tr = await tracker(t, message => w.send(message, sender));
+    tr.window.document.querySelector('.b-post__info a[href^="/help/"]').remove();
+    tr.window.document.querySelector('.b-post__origtitle').remove();
+    const selected = tr.window.document.querySelector('.b-simple_episode__item.active');
+    selected.dataset.season_id = '4'; selected.dataset.episode_id = '11';
+    await tr.sample(870);
+    for (let i = 871; i <= 900; i++) await tr.sample(i);
+    await until(() => w.state.entries[0]?.status === 'attention');
+    assert.equal(w.state.entries[0].code, 'manual');
+    assert.equal(w.calls.length, 1);
+    const body = JSON.parse(w.calls[0].options.body);
+    assert.deepEqual(body.show, { title: 'Example show', year: 2020, ids: {} });
+    assert.deepEqual(body.episode, { season: 4, number: 11 });
+    assert.equal(body.progress, 90);
 });
 
 test('a forward seek earns the current position after 30 playback seconds and uses the normal sync pipeline', async t => {
@@ -996,4 +1069,152 @@ test('local reset rejects uncertain submissions, foreign accounts and non-panel 
     await w.send({ type: 'myshows:disconnect' });
     assert.equal((await w.send(request)).ok, true, 'local recovery does not require network access or a connection');
     assert.equal(w.calls.length, 0);
+});
+
+test('removing unsent history persists without recreating cancelled requests; explicit marks start fresh', async () => {
+    for (const media of [episode, movie]) {
+        const cancelled = entry({ episode: media, key: M.mediaKey(media), status: 'cancelled', manualAt: 1 });
+        const other = entry({ id: 'other', key: '999:1:1', status: 'done' });
+        const options = { playerEpisode: media, ...(M.isMovie(media) ? movieRemote : {}) };
+        const w = await worker({ rows: [cancelled, other], ...options });
+        const request = { type: 'myshows:remove', id: cancelled.id, account: 'testuser' };
+        const replies = await Promise.all([w.send(request), w.send(request)]);
+        assert.deepEqual(replies.map(reply => reply.ok), [true, false]);
+        assert.deepEqual(w.state.entries, [other]);
+        assert.deepEqual(w.state.removed, [{ account: 'testuser', key: cancelled.key }]);
+        assert.equal(w.calls.length, 0); assert.equal(w.tabs.size, 0);
+        const sender = { ...movieSender, url: 'https://rezka.fi/' + (M.isMovie(media) ? 'films' : 'series') + '/test/123-example.html' };
+        const late = { type: 'myshows:progress', account: 'testuser', episode: media, duration: 1000, ranges: [[0, 1000]], confirmedPosition: 1000 };
+        assert.equal((await w.send(late, sender)).tracking, false);
+        const restarted = await worker({ values: w.values, ...options });
+        assert.equal((await restarted.send(late, sender)).tracking, false);
+        await restarted.send({ type: 'myshows:configure', threshold: 1 }); restarted.alarm(); await tick();
+        assert.deepEqual(restarted.state.entries, [other]); assert.equal(restarted.calls.length, 0);
+        assert.equal(M.isRemoved({ ...restarted.state, account: 'someone-else' }, cancelled.key), false);
+        restarted.tabs.set(99, { id: 99, active: true, url: sender.url });
+        await restarted.send({ type: 'myshows:configure', enabled: false });
+        assert.equal((await restarted.send({ type: 'myshows:force', tabId: 99, key: cancelled.key, account: 'testuser' })).ok, true);
+        await until(() => restarted.state.entries.some(item => item.key === cancelled.key && item.status === 'done'));
+        const replacement = restarted.state.entries.find(item => item.key === cancelled.key);
+        assert.notEqual(replacement.id, cancelled.id); assert.notEqual(replacement.source, cancelled.source);
+        assert.deepEqual(restarted.state.removed, []); assert.equal(restarted.calls.length, 1);
+    }
+});
+
+test('history removal rejects successful, uncertain, active, foreign and non-panel requests but works offline', async () => {
+    for (const extra of [
+        ...['watching', 'queued', 'sending', 'confirming', 'checking', 'attention', 'done', 'reset'].map(status => ({ status })),
+        { status: 'cancelled', submittedAt: 1 }, { status: 'cancelled', manualPending: true }
+    ]) {
+        const w = await worker({ enabled: false, rows: [entry(extra)] });
+        const before = copy(w.state.entries);
+        assert.equal((await w.send({ type: 'myshows:remove', id: 'test-entry', account: 'testuser' })).ok, false);
+        assert.deepEqual(w.state.entries, before); assert.equal(w.state.removed, undefined); assert.equal(w.calls.length, 0);
+    }
+    const w = await worker({ rows: [entry({ status: 'cancelled' }), entry({ id: 'foreign', account: 'other', status: 'cancelled' })] });
+    const request = { type: 'myshows:remove', id: 'test-entry', account: 'testuser' }, before = copy(w.state.entries);
+    for (const extra of [{ account: 'other' }, { account: undefined }, { id: 'foreign' }, { id: 'missing' }]) {
+        assert.equal((await w.send({ ...request, ...extra })).ok, false);
+    }
+    assert.equal((await w.send(request, movieSender)).ok, false);
+    assert.equal((await w.send(request, { id: 'extension-id', url: 'https://example.test/' })).ok, false);
+    assert.deepEqual(w.state.entries, before);
+    await w.send({ type: 'myshows:disconnect' });
+    assert.equal((await w.send(request)).ok, true);
+    assert.deepEqual(w.state.entries, [before[1]]); assert.equal(w.calls.length, 0);
+});
+
+test('removing a cancelled in-flight submission stays blocked until explicit remote rejection', async () => {
+    let finish;
+    const w = await worker({ response: () => new Promise(resolve => { finish = resolve; }) });
+    await w.send({ type: 'myshows:cancel', id: 'test-entry' });
+    const request = { type: 'myshows:remove', id: 'test-entry', account: 'testuser' };
+    assert.equal((await w.send(request)).ok, false);
+    finish({ status: 400, json: async () => ({ error: 'validation failed: sourceApp:len' }) });
+    for (let i = 0; i < 20; i++) await tick();
+    assert.equal((await w.send(request)).ok, true);
+    assert.deepEqual(w.state.entries, []); assert.equal(w.calls.length, 1);
+});
+
+test('restoring removed movies and episodes starts fresh tracking and rejects pre-restoration progress', async t => {
+    for (const media of [episode, movie]) {
+        const key = M.mediaKey(media), cancelled = entry({ episode: media, key, status: 'cancelled' });
+        const sender = { ...movieSender, url: `https://rezka.fi/${M.isMovie(media) ? 'films' : 'series'}/test/123-example.html` };
+        const w = await worker({ rows: [cancelled], playerEpisode: media, ...(M.isMovie(media) ? movieRemote : {}) });
+        w.tabs.set(99, { id: 99, active: true, url: sender.url });
+        const tr = await tracker(t, message => w.send(copy(message), sender), { movie: M.isMovie(media) });
+        await w.send({ type: 'myshows:remove', id: cancelled.id, account: 'testuser' });
+        await tr.sample(950); await tr.sample(951); await tr.flush();
+        assert.deepEqual(w.state.entries, []);
+        const restore = { type: 'myshows:restore', tabId: 99, key, account: 'testuser' };
+        const replies = await Promise.all([w.send(restore), w.send(restore)]);
+        assert.deepEqual(replies.map(reply => reply.ok), [true, false]);
+        const fresh = w.state.entries[0];
+        assert.equal(fresh.status, 'watching'); assert.equal(fresh.progress, 0);
+        assert.deepEqual(fresh.ranges, []); assert.equal(fresh.confirmedPosition, 0);
+        assert.notEqual(fresh.id, cancelled.id); assert.notEqual(fresh.source, cancelled.source);
+        assert.ok(fresh.trackingEpoch); assert.equal(fresh.manualAt, undefined);
+        assert.deepEqual(w.state.removed, []); assert.equal(w.calls.length, 0);
+        const oldBatch = { type: 'myshows:progress', account: 'testuser', episode: media, duration: 1000, ranges: [[0, 1000]], confirmedPosition: 1000 };
+        for (const batch of [oldBatch, { ...oldBatch, trackingEpoch: 'older-viewing' }]) {
+            assert.equal((await w.send(batch, sender)).tracking, false);
+        }
+        assert.equal(w.state.entries[0].progress, 0);
+        tr.configure(w.state);
+        await tr.sample(950);
+        for (let i = 1; i <= 29; i++) await tr.sample(950 + i);
+        await tr.flush(); assert.equal(w.calls.length, 0);
+        await tr.sample(980);
+        await until(() => w.state.entries[0].status === 'done');
+        assert.equal(w.calls.length, 1);
+        const payload = JSON.parse(w.calls[0].options.body);
+        assert.equal(payload.progress, 98); assert.equal(payload.source_app, fresh.source);
+    }
+});
+
+test('restoration checks the selected media, account and panel origin and preserves global pause', async () => {
+    const w = await worker({ rows: [entry({ status: 'cancelled' })], enabled: false });
+    await w.send({ type: 'myshows:remove', id: 'test-entry', account: 'testuser' });
+    w.state.removed.push({ account: 'other', key: '123:1:2' }, { account: 'testuser', key: 'movie:456' });
+    w.tabs.set(99, { id: 99, active: true, url: 'https://rezka.fi/series/test/123-example.html' });
+    const request = { type: 'myshows:restore', tabId: 99, key: '123:1:2', account: 'testuser' };
+    const before = copy(w.state);
+    for (const extra of [{ account: 'other' }, { account: undefined }, { key: 'movie:456' }, { tabId: 999 }]) {
+        assert.equal((await w.send({ ...request, ...extra })).ok, false);
+    }
+    assert.equal((await w.send(request, movieSender)).ok, false);
+    assert.equal((await w.send(request, { id: 'extension-id', url: 'https://example.test/' })).ok, false);
+    w.tabs.get(99).active = false;
+    assert.equal((await w.send(request)).ok, false);
+    w.tabs.get(99).active = true;
+    assert.deepEqual(w.state, before);
+    const reply = await w.send(request);
+    assert.equal(reply.ok, true); assert.match(reply.notice, /Включите автоматические отметки/);
+    assert.equal(w.state.enabled, false); assert.equal(w.calls.length, 0);
+    assert.deepEqual(w.state.removed, before.removed.slice(1));
+    const restarted = await worker({ values: w.values });
+    assert.equal(restarted.state.entries[0].status, 'watching');
+    assert.equal(restarted.state.entries[0].progress, 0); assert.equal(restarted.calls.length, 0);
+});
+
+test('restored tracker discards old buffered progress and ignores delayed stop replies or save failures', async t => {
+    for (const outcome of ['buffered', 'stopped', 'failed']) {
+        let finish, reject; const sent = [];
+        const tr = await tracker(t, message => {
+            sent.push(copy(message));
+            if (outcome !== 'buffered' && sent.length === 1) return new Promise((resolve, fail) => { finish = resolve; reject = fail; });
+            return Promise.resolve({ ok: true });
+        });
+        await tr.sample(950); await tr.sample(951);
+        if (outcome !== 'buffered') await tr.flush();
+        tr.configure({ enabled: true, connection: 'connected', account: 'testuser', entries: [entry({ status: 'watching', trackingEpoch: 'new-viewing' })] });
+        if (outcome === 'stopped') finish({ ok: true, tracking: false });
+        if (outcome === 'failed') reject(new Error('old save failed'));
+        await tick();
+        await tr.sample(10); await tr.sample(11); await tr.flush();
+        assert.equal(sent.at(-1).trackingEpoch, 'new-viewing');
+        assert.deepEqual(sent.at(-1).ranges, [[10, 11]]);
+        assert.equal(sent.at(-1).confirmedPosition, 0);
+        assert.equal(tr.current().playback.seconds, 1);
+    }
 });

@@ -1,20 +1,35 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-11-01T01:26:23.514Z",
+  "generatedAt": "2026-11-05T20:35:02.238Z",
   "title": "Design System: Rezka Custom",
   "extensions": {
     "shadows": [
       {
         "name": "selection",
         "value": "0 1px 3px #222a3b14",
-        "purpose": "Selected tabs and radio options only."
+        "purpose": "Selected panel tabs and radio options only."
+      },
+      {
+        "name": "search-value-options",
+        "value": "0 6px 18px #0003",
+        "purpose": "Floating value suggestion list in the condition editor."
       }
     ],
     "motion": [
       {
         "name": "switch-state",
         "value": "150ms ease",
-        "purpose": "Track color and thumb position; disabled with reduced motion."
+        "purpose": "Panel track color and thumb position; disabled with reduced motion."
+      },
+      {
+        "name": "search-press",
+        "value": "translateY(1px)",
+        "purpose": "Immediate pressed state, not a transition; disabled with reduced motion."
+      },
+      {
+        "name": "watched-saving",
+        "value": ".8s linear infinite",
+        "purpose": "Pending watched action spinner; static with reduced motion."
       }
     ],
     "breakpoints": [
@@ -29,6 +44,18 @@
       {
         "name": "coarse-pointer",
         "value": "(pointer:coarse)"
+      },
+      {
+        "name": "search-compact-columns",
+        "value": "(max-width:1000px)"
+      },
+      {
+        "name": "search-stacked",
+        "value": "(max-width:700px)"
+      },
+      {
+        "name": "search-small-query",
+        "value": "(max-width:400px)"
       }
     ],
     "colorMeta": {
@@ -255,6 +282,384 @@
           "oklch(82% 0.01262 6.61)",
           "oklch(95% 0.00351 6.61)"
         ]
+      },
+      "site-surface": {
+        "role": "neutral",
+        "displayName": "Site white surface",
+        "tonalRamp": [
+          "oklch(15% 0.00000 0.00)",
+          "oklch(26% 0.00000 0.00)",
+          "oklch(37% 0.00000 0.00)",
+          "oklch(48% 0.00000 0.00)",
+          "oklch(59% 0.00000 0.00)",
+          "oklch(70% 0.00000 0.00)",
+          "oklch(82% 0.00000 0.00)",
+          "oklch(95% 0.00000 0.00)"
+        ]
+      },
+      "site-inset": {
+        "role": "neutral",
+        "displayName": "Site cool-gray inset",
+        "tonalRamp": [
+          "oklch(15% 0.00128 247.86)",
+          "oklch(26% 0.00223 247.86)",
+          "oklch(37% 0.00317 247.86)",
+          "oklch(48% 0.00343 247.86)",
+          "oklch(59% 0.00343 247.86)",
+          "oklch(70% 0.00343 247.86)",
+          "oklch(82% 0.00206 247.86)",
+          "oklch(95% 0.00057 247.86)"
+        ]
+      },
+      "site-ink": {
+        "role": "neutral",
+        "displayName": "Site primary ink",
+        "tonalRamp": [
+          "oklch(15% 0.00593 240.57)",
+          "oklch(26% 0.01027 240.57)",
+          "oklch(37% 0.01462 240.57)",
+          "oklch(48% 0.01580 240.57)",
+          "oklch(59% 0.01580 240.57)",
+          "oklch(70% 0.01580 240.57)",
+          "oklch(82% 0.00948 240.57)",
+          "oklch(95% 0.00263 240.57)"
+        ]
+      },
+      "site-muted": {
+        "role": "neutral",
+        "displayName": "Site supporting ink",
+        "tonalRamp": [
+          "oklch(15% 0.00845 236.16)",
+          "oklch(26% 0.01464 236.16)",
+          "oklch(37% 0.02083 236.16)",
+          "oklch(48% 0.02252 236.16)",
+          "oklch(59% 0.02252 236.16)",
+          "oklch(70% 0.02252 236.16)",
+          "oklch(82% 0.01351 236.16)",
+          "oklch(95% 0.00375 236.16)"
+        ]
+      },
+      "site-line": {
+        "role": "neutral",
+        "displayName": "Site divider",
+        "tonalRamp": [
+          "oklch(15% 0.00355 242.85)",
+          "oklch(26% 0.00615 242.85)",
+          "oklch(37% 0.00875 242.85)",
+          "oklch(48% 0.00946 242.85)",
+          "oklch(59% 0.00946 242.85)",
+          "oklch(70% 0.00946 242.85)",
+          "oklch(82% 0.00568 242.85)",
+          "oklch(95% 0.00158 242.85)"
+        ]
+      },
+      "site-control": {
+        "role": "neutral",
+        "displayName": "Site control boundary",
+        "tonalRamp": [
+          "oklch(15% 0.00806 240.94)",
+          "oklch(26% 0.01397 240.94)",
+          "oklch(37% 0.01987 240.94)",
+          "oklch(48% 0.02149 240.94)",
+          "oklch(59% 0.02149 240.94)",
+          "oklch(70% 0.02149 240.94)",
+          "oklch(82% 0.01289 240.94)",
+          "oklch(95% 0.00358 240.94)"
+        ]
+      },
+      "site-accent": {
+        "role": "primary",
+        "displayName": "Slate-blue action",
+        "tonalRamp": [
+          "oklch(15% 0.03182 250.64)",
+          "oklch(26% 0.05516 250.64)",
+          "oklch(37% 0.07850 250.64)",
+          "oklch(48% 0.08487 250.64)",
+          "oklch(59% 0.08487 250.64)",
+          "oklch(70% 0.08487 250.64)",
+          "oklch(82% 0.05092 250.64)",
+          "oklch(95% 0.01414 250.64)"
+        ]
+      },
+      "site-accent-hover": {
+        "role": "primary",
+        "displayName": "Deep slate-blue hover",
+        "tonalRamp": [
+          "oklch(15% 0.02528 249.33)",
+          "oklch(26% 0.04382 249.33)",
+          "oklch(37% 0.06235 249.33)",
+          "oklch(48% 0.06741 249.33)",
+          "oklch(59% 0.06741 249.33)",
+          "oklch(70% 0.06741 249.33)",
+          "oklch(82% 0.04045 249.33)",
+          "oklch(95% 0.01123 249.33)"
+        ]
+      },
+      "site-on-accent": {
+        "role": "primary",
+        "displayName": "Light action text",
+        "tonalRamp": [
+          "oklch(15% 0.00000 0.00)",
+          "oklch(26% 0.00000 0.00)",
+          "oklch(37% 0.00000 0.00)",
+          "oklch(48% 0.00000 0.00)",
+          "oklch(59% 0.00000 0.00)",
+          "oklch(70% 0.00000 0.00)",
+          "oklch(82% 0.00000 0.00)",
+          "oklch(95% 0.00000 0.00)"
+        ]
+      },
+      "site-error-surface": {
+        "role": "error",
+        "displayName": "Light error surface",
+        "tonalRamp": [
+          "oklch(15% 0.00619 26.65)",
+          "oklch(26% 0.01072 26.65)",
+          "oklch(37% 0.01526 26.65)",
+          "oklch(48% 0.01650 26.65)",
+          "oklch(59% 0.01650 26.65)",
+          "oklch(70% 0.01650 26.65)",
+          "oklch(82% 0.00990 26.65)",
+          "oklch(95% 0.00275 26.65)"
+        ]
+      },
+      "site-error-ink": {
+        "role": "error",
+        "displayName": "Light error ink",
+        "tonalRamp": [
+          "oklch(15% 0.05795 28.58)",
+          "oklch(26% 0.10045 28.58)",
+          "oklch(37% 0.14294 28.58)",
+          "oklch(48% 0.15453 28.58)",
+          "oklch(59% 0.15453 28.58)",
+          "oklch(70% 0.15453 28.58)",
+          "oklch(82% 0.09272 28.58)",
+          "oklch(95% 0.02576 28.58)"
+        ]
+      },
+      "site-dark-surface": {
+        "role": "neutral",
+        "displayName": "Deep teal surface",
+        "tonalRamp": [
+          "oklch(15% 0.00899 225.91)",
+          "oklch(26% 0.01559 225.91)",
+          "oklch(37% 0.02218 225.91)",
+          "oklch(48% 0.02398 225.91)",
+          "oklch(59% 0.02398 225.91)",
+          "oklch(70% 0.02398 225.91)",
+          "oklch(82% 0.01439 225.91)",
+          "oklch(95% 0.00400 225.91)"
+        ]
+      },
+      "site-dark-inset": {
+        "role": "neutral",
+        "displayName": "Slate inset",
+        "tonalRamp": [
+          "oklch(15% 0.00894 228.50)",
+          "oklch(26% 0.01549 228.50)",
+          "oklch(37% 0.02205 228.50)",
+          "oklch(48% 0.02384 228.50)",
+          "oklch(59% 0.02384 228.50)",
+          "oklch(70% 0.02384 228.50)",
+          "oklch(82% 0.01430 228.50)",
+          "oklch(95% 0.00397 228.50)"
+        ]
+      },
+      "site-dark-ink": {
+        "role": "neutral",
+        "displayName": "Pale site ink",
+        "tonalRamp": [
+          "oklch(15% 0.00225 223.46)",
+          "oklch(26% 0.00389 223.46)",
+          "oklch(37% 0.00554 223.46)",
+          "oklch(48% 0.00599 223.46)",
+          "oklch(59% 0.00599 223.46)",
+          "oklch(70% 0.00599 223.46)",
+          "oklch(82% 0.00359 223.46)",
+          "oklch(95% 0.00100 223.46)"
+        ]
+      },
+      "site-dark-muted": {
+        "role": "neutral",
+        "displayName": "Muted pale site ink",
+        "tonalRamp": [
+          "oklch(15% 0.00827 227.62)",
+          "oklch(26% 0.01434 227.62)",
+          "oklch(37% 0.02040 227.62)",
+          "oklch(48% 0.02206 227.62)",
+          "oklch(59% 0.02206 227.62)",
+          "oklch(70% 0.02206 227.62)",
+          "oklch(82% 0.01324 227.62)",
+          "oklch(95% 0.00368 227.62)"
+        ]
+      },
+      "site-dark-line": {
+        "role": "neutral",
+        "displayName": "Dark site divider",
+        "tonalRamp": [
+          "oklch(15% 0.01031 229.98)",
+          "oklch(26% 0.01787 229.98)",
+          "oklch(37% 0.02543 229.98)",
+          "oklch(48% 0.02749 229.98)",
+          "oklch(59% 0.02749 229.98)",
+          "oklch(70% 0.02749 229.98)",
+          "oklch(82% 0.01650 229.98)",
+          "oklch(95% 0.00458 229.98)"
+        ]
+      },
+      "site-dark-control": {
+        "role": "neutral",
+        "displayName": "Dark site control boundary",
+        "tonalRamp": [
+          "oklch(15% 0.01042 229.45)",
+          "oklch(26% 0.01806 229.45)",
+          "oklch(37% 0.02571 229.45)",
+          "oklch(48% 0.02779 229.45)",
+          "oklch(59% 0.02779 229.45)",
+          "oklch(70% 0.02779 229.45)",
+          "oklch(82% 0.01667 229.45)",
+          "oklch(95% 0.00463 229.45)"
+        ]
+      },
+      "site-dark-accent": {
+        "role": "primary",
+        "displayName": "Pale-blue action",
+        "tonalRamp": [
+          "oklch(15% 0.02017 238.93)",
+          "oklch(26% 0.03496 238.93)",
+          "oklch(37% 0.04975 238.93)",
+          "oklch(48% 0.05379 238.93)",
+          "oklch(59% 0.05379 238.93)",
+          "oklch(70% 0.05379 238.93)",
+          "oklch(82% 0.03227 238.93)",
+          "oklch(95% 0.00896 238.93)"
+        ]
+      },
+      "site-dark-accent-hover": {
+        "role": "primary",
+        "displayName": "Pale-blue hover",
+        "tonalRamp": [
+          "oklch(15% 0.01482 235.16)",
+          "oklch(26% 0.02568 235.16)",
+          "oklch(37% 0.03655 235.16)",
+          "oklch(48% 0.03951 235.16)",
+          "oklch(59% 0.03951 235.16)",
+          "oklch(70% 0.03951 235.16)",
+          "oklch(82% 0.02371 235.16)",
+          "oklch(95% 0.00658 235.16)"
+        ]
+      },
+      "site-dark-on-accent": {
+        "role": "primary",
+        "displayName": "Dark action text",
+        "tonalRamp": [
+          "oklch(15% 0.01278 233.19)",
+          "oklch(26% 0.02215 233.19)",
+          "oklch(37% 0.03152 233.19)",
+          "oklch(48% 0.03407 233.19)",
+          "oklch(59% 0.03407 233.19)",
+          "oklch(70% 0.03407 233.19)",
+          "oklch(82% 0.02044 233.19)",
+          "oklch(95% 0.00568 233.19)"
+        ]
+      },
+      "site-dark-error-surface": {
+        "role": "error",
+        "displayName": "Dark error surface",
+        "tonalRamp": [
+          "oklch(15% 0.01282 13.58)",
+          "oklch(26% 0.02222 13.58)",
+          "oklch(37% 0.03162 13.58)",
+          "oklch(48% 0.03418 13.58)",
+          "oklch(59% 0.03418 13.58)",
+          "oklch(70% 0.03418 13.58)",
+          "oklch(82% 0.02051 13.58)",
+          "oklch(95% 0.00570 13.58)"
+        ]
+      },
+      "site-dark-error-ink": {
+        "role": "error",
+        "displayName": "Pale error ink",
+        "tonalRamp": [
+          "oklch(15% 0.03136 25.31)",
+          "oklch(26% 0.05436 25.31)",
+          "oklch(37% 0.07735 25.31)",
+          "oklch(48% 0.08362 25.31)",
+          "oklch(59% 0.08362 25.31)",
+          "oklch(70% 0.08362 25.31)",
+          "oklch(82% 0.05017 25.31)",
+          "oklch(95% 0.01394 25.31)"
+        ]
+      },
+      "help-canvas": {
+        "role": "neutral",
+        "displayName": "Help charcoal",
+        "tonalRamp": [
+          "oklch(15% 0.00227 236.85)",
+          "oklch(26% 0.00393 236.85)",
+          "oklch(37% 0.00559 236.85)",
+          "oklch(48% 0.00604 236.85)",
+          "oklch(59% 0.00604 236.85)",
+          "oklch(70% 0.00604 236.85)",
+          "oklch(82% 0.00363 236.85)",
+          "oklch(95% 0.00101 236.85)"
+        ]
+      },
+      "help-ink": {
+        "role": "neutral",
+        "displayName": "Help pale ink",
+        "tonalRamp": [
+          "oklch(15% 0.00132 219.53)",
+          "oklch(26% 0.00228 219.53)",
+          "oklch(37% 0.00325 219.53)",
+          "oklch(48% 0.00351 219.53)",
+          "oklch(59% 0.00351 219.53)",
+          "oklch(70% 0.00351 219.53)",
+          "oklch(82% 0.00211 219.53)",
+          "oklch(95% 0.00059 219.53)"
+        ]
+      },
+      "help-muted": {
+        "role": "neutral",
+        "displayName": "Help supporting ink",
+        "tonalRamp": [
+          "oklch(15% 0.00394 228.92)",
+          "oklch(26% 0.00683 228.92)",
+          "oklch(37% 0.00972 228.92)",
+          "oklch(48% 0.01051 228.92)",
+          "oklch(59% 0.01051 228.92)",
+          "oklch(70% 0.01051 228.92)",
+          "oklch(82% 0.00630 228.92)",
+          "oklch(95% 0.00175 228.92)"
+        ]
+      },
+      "help-accent": {
+        "role": "primary",
+        "displayName": "Help mint action",
+        "tonalRamp": [
+          "oklch(15% 0.03194 177.68)",
+          "oklch(26% 0.05536 177.68)",
+          "oklch(37% 0.07878 177.68)",
+          "oklch(48% 0.08517 177.68)",
+          "oklch(59% 0.08517 177.68)",
+          "oklch(70% 0.08517 177.68)",
+          "oklch(82% 0.05110 177.68)",
+          "oklch(95% 0.01420 177.68)"
+        ]
+      },
+      "help-on-accent": {
+        "role": "primary",
+        "displayName": "Help dark action text",
+        "tonalRamp": [
+          "oklch(15% 0.01142 170.28)",
+          "oklch(26% 0.01980 170.28)",
+          "oklch(37% 0.02817 170.28)",
+          "oklch(48% 0.03046 170.28)",
+          "oklch(59% 0.03046 170.28)",
+          "oklch(70% 0.03046 170.28)",
+          "oklch(82% 0.01827 170.28)",
+          "oklch(95% 0.00508 170.28)"
+        ]
       }
     },
     "typographyMeta": {
@@ -281,6 +686,34 @@
       "brand": {
         "displayName": "Product name",
         "purpose": "Rezka Custom in the panel header, combining regular and semibold."
+      },
+      "site-headline": {
+        "displayName": "Search page heading",
+        "purpose": "Larger on-site heading relative to the 16px search base; inherits the selected site font."
+      },
+      "site-body": {
+        "displayName": "Site interface text",
+        "purpose": "Search controls and page copy; inherits the selected site font."
+      },
+      "catalogue-title": {
+        "displayName": "Catalogue title",
+        "purpose": "Shared native and search card titles with natural wrapping."
+      },
+      "catalogue-meta": {
+        "displayName": "Catalogue metadata",
+        "purpose": "Year, country, genre and episode status."
+      },
+      "catalogue-type": {
+        "displayName": "Catalogue type",
+        "purpose": "Film/series category below the poster."
+      },
+      "help-body": {
+        "displayName": "Help reading text",
+        "purpose": "Separate help and diagnostics page."
+      },
+      "site-compact-control": {
+        "displayName": "Compact site control",
+        "purpose": "Saved-set and extra-filter selectors, plus bordered filter actions; inherits the site font and scales from the site-body base."
       }
     }
   },
@@ -294,13 +727,6 @@
       "css": ".ds-specimen { font-family:var(--font-family, \"Segoe UI Variable\", \"Segoe UI\", system-ui, sans-serif); font-size:var(--text-body, .8125rem); line-height:1.5; color:var(--ink, #222a3b); }\n:where(.ds-specimen button, .ds-specimen input) { font:inherit; color:inherit; }\n.ds-specimen button { cursor:pointer; }\n.ds-specimen button:disabled, .ds-specimen input:disabled { opacity:.65; cursor:default; }\n.ds-specimen :focus-visible { outline:2px solid var(--accent, #4b5fc5); outline-offset:3px; }\n.ds-specimen ::selection { background:var(--accent, #4b5fc5); color:var(--surface, #ffffff); }\n@media (forced-colors:active) { .ds-specimen :focus-visible { outline-color:Highlight; } }\n.ds-reload { border:0; background:var(--accent, #4b5fc5); color:var(--surface, #ffffff); font-weight:600; border-radius:6px; min-height:44px; padding:7px 10px; }\n.ds-reload:hover { background:var(--accent-hover, #3d4fae); }"
     },
     {
-      "name": "Text action",
-      "kind": "button",
-      "description": "Clear a search while keeping keyboard focus available. Static style specimen.",
-      "html": "<div class=\"ds-specimen\"><button class=\"ds-text-button\" type=\"button\">Очистить поиск</button></div>",
-      "css": ".ds-specimen { font-family:var(--font-family, \"Segoe UI Variable\", \"Segoe UI\", system-ui, sans-serif); font-size:var(--text-body, .8125rem); line-height:1.5; color:var(--ink, #222a3b); }\n:where(.ds-specimen button, .ds-specimen input) { font:inherit; color:inherit; }\n.ds-specimen button { cursor:pointer; }\n.ds-specimen button:disabled, .ds-specimen input:disabled { opacity:.65; cursor:default; }\n.ds-specimen :focus-visible { outline:2px solid var(--accent, #4b5fc5); outline-offset:3px; }\n.ds-specimen ::selection { background:var(--accent, #4b5fc5); color:var(--surface, #ffffff); }\n@media (forced-colors:active) { .ds-specimen :focus-visible { outline-color:Highlight; } }\n.ds-text-button { background:none; border:0; min-height:44px; padding:8px 4px; color:var(--accent, #4b5fc5); text-underline-offset:3px; }\n.ds-text-button:hover { text-decoration:underline; }"
-    },
-    {
       "name": "Search field",
       "kind": "input",
       "refersTo": "search-field",
@@ -312,8 +738,8 @@
       "name": "Section navigation",
       "kind": "nav",
       "refersTo": "navigation",
-      "description": "Appearance, player, hidden blocks and MyShows; first tab shown selected. Static style specimen.",
-      "html": "<div class=\"ds-specimen\"><nav class=\"ds-tabs\" aria-label=\"Разделы настроек\" role=\"tablist\">\n      <button role=\"tab\" aria-selected=\"true\"><svg aria-hidden=\"true\" viewBox=\"0 0 24 24\"><rect x=\"3\" y=\"4\" width=\"18\" height=\"13\" rx=\"2\"/><path d=\"M8 21h8m-4-4v4\"/></svg>Вид</button>\n      <button role=\"tab\" aria-selected=\"false\" tabindex=\"-1\"><svg aria-hidden=\"true\" viewBox=\"0 0 24 24\"><path d=\"m9 5 11 7-11 7zM4 5v14\"/></svg>Плеер</button>\n      <button role=\"tab\" aria-selected=\"false\" tabindex=\"-1\"><svg aria-hidden=\"true\" viewBox=\"0 0 24 24\"><path d=\"m3 3 18 18M10.5 10.5a2 2 0 0 0 3 3M9 5.4A11 11 0 0 1 12 5c7 0 10 7 10 7a16 16 0 0 1-3 4M6 6a18 18 0 0 0-4 6s3 7 10 7a11 11 0 0 0 4-.7\"/></svg>Скрытие</button>\n      <button role=\"tab\" aria-selected=\"false\" tabindex=\"-1\"><svg aria-hidden=\"true\" viewBox=\"0 0 24 24\"><rect x=\"3\" y=\"4\" width=\"18\" height=\"16\" rx=\"2\"/><path d=\"m7 12 3 3 7-7\"/></svg>MyShows</button>\n    </nav></div>",
+      "description": "Appearance, player and MyShows; first tab shown selected. Static style specimen.",
+      "html": "<div class=\"ds-specimen\"><nav class=\"ds-tabs\" aria-label=\"Разделы настроек\" role=\"tablist\">\n      <button role=\"tab\" aria-selected=\"true\"><svg aria-hidden=\"true\" viewBox=\"0 0 24 24\"><rect x=\"3\" y=\"4\" width=\"18\" height=\"13\" rx=\"2\"></rect><path d=\"M8 21h8m-4-4v4\"></path></svg>Вид</button>\n      <button role=\"tab\" aria-selected=\"false\" tabindex=\"-1\"><svg aria-hidden=\"true\" viewBox=\"0 0 24 24\"><path d=\"m9 5 11 7-11 7zM4 5v14\"></path></svg>Плеер</button>\n      <button role=\"tab\" aria-selected=\"false\" tabindex=\"-1\"><svg aria-hidden=\"true\" viewBox=\"0 0 24 24\"><rect x=\"3\" y=\"4\" width=\"18\" height=\"16\" rx=\"2\"></rect><path d=\"m7 12 3 3 7-7\"></path></svg>MyShows</button>\n    </nav></div>",
       "css": ".ds-specimen { font-family:var(--font-family, \"Segoe UI Variable\", \"Segoe UI\", system-ui, sans-serif); font-size:var(--text-body, .8125rem); line-height:1.5; color:var(--ink, #222a3b); }\n:where(.ds-specimen button, .ds-specimen input) { font:inherit; color:inherit; }\n.ds-specimen button { cursor:pointer; }\n.ds-specimen button:disabled, .ds-specimen input:disabled { opacity:.65; cursor:default; }\n.ds-specimen :focus-visible { outline:2px solid var(--accent, #4b5fc5); outline-offset:3px; }\n.ds-specimen ::selection { background:var(--accent, #4b5fc5); color:var(--surface, #ffffff); }\n@media (forced-colors:active) { .ds-specimen :focus-visible { outline-color:Highlight; } }\n.ds-tabs { display:flex; flex-wrap:wrap; margin:0; padding:3px; gap:3px; background:var(--subtle-surface, #e6eaf1); border-radius:10px; }\n.ds-tabs button { border:0; border-radius:7px; background:none; color:var(--muted, #58657a); flex:1 1 0; min-width:0; min-height:48px; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:4px; font-size:var(--text-small, .75rem); font-weight:600; padding:7px 2px; overflow-wrap:anywhere; }\n.ds-tabs button:hover { color:var(--ink, #222a3b); background:var(--canvas, #f2f4f8); }\n.ds-tabs button[aria-selected=\"true\"] { background:var(--surface, #ffffff); color:var(--accent, #4b5fc5); box-shadow:var(--selection-shadow, 0 1px 3px #222a3b14); }\n.ds-tabs svg { width:18px; height:18px; }\n.ds-tabs svg { fill:none; stroke:currentColor; stroke-width:1.65; stroke-linecap:round; stroke-linejoin:round; flex-shrink:0; }\n@media (max-width:350px) { .ds-tabs button { flex-basis:auto; } }\n@media (forced-colors:active) { .ds-tabs button[aria-selected=\"true\"] { outline:2px solid Highlight; outline-offset:-2px; } }"
     },
     {
@@ -324,53 +750,91 @@
       "css": ".ds-specimen { font-family:var(--font-family, \"Segoe UI Variable\", \"Segoe UI\", system-ui, sans-serif); font-size:var(--text-body, .8125rem); line-height:1.5; color:var(--ink, #222a3b); }\n:where(.ds-specimen button, .ds-specimen input) { font:inherit; color:inherit; }\n.ds-specimen button { cursor:pointer; }\n.ds-specimen button:disabled, .ds-specimen input:disabled { opacity:.65; cursor:default; }\n.ds-specimen :focus-visible { outline:2px solid var(--accent, #4b5fc5); outline-offset:3px; }\n.ds-specimen ::selection { background:var(--accent, #4b5fc5); color:var(--surface, #ffffff); }\n@media (forced-colors:active) { .ds-specimen :focus-visible { outline-color:Highlight; } }\n.ds-setting { display:flex; align-items:center; justify-content:space-between; gap:16px; min-height:57px; padding:12px 0; border-bottom:1px solid var(--line, #dfe4ed); }\n.ds-setting:last-child { border-bottom:0; }\n.ds-setting-toggle { cursor:pointer; }\n.ds-setting-toggle:hover .ds-setting-name { color:var(--accent, #4b5fc5); }\n.ds-setting-text { display:flex; flex-direction:column; gap:3px; min-width:0; }\n.ds-setting-name { font-weight:600; font-size:var(--text-body, .8125rem); line-height:1.46; overflow-wrap:anywhere; }\n.ds-setting-description { font-size:var(--text-small, .75rem); line-height:1.5; color:var(--muted, #58657a); max-width:270px; overflow-wrap:anywhere; text-wrap:pretty; }\n.ds-switch { appearance:none; position:relative; width:34px; height:20px; flex:0 0 34px; border:1px solid var(--control-border, #77839a); border-radius:20px; background:var(--control-off, #77839a); margin:0 1px; cursor:pointer; transition:background var(--motion-fast, 150ms); }\n.ds-switch::before { content:\"\"; position:absolute; width:14px; height:14px; border-radius:50%; background:var(--surface, #ffffff); left:2px; top:2px; transition:transform var(--motion-fast, 150ms); }\n.ds-switch:checked { background:var(--accent, #4b5fc5); border-color:var(--accent, #4b5fc5); }\n.ds-switch:checked::before { transform:translateX(14px); }\n@media (prefers-reduced-motion:reduce) { .ds-switch, .ds-switch::before { transition:none; } }\n@media (forced-colors:active) { .ds-switch { background:Canvas; border-color:ButtonText; forced-color-adjust:none; } .ds-switch::before { background:ButtonText; forced-color-adjust:none; } .ds-switch:checked { background:Highlight; border-color:Highlight; } .ds-switch:checked::before { background:HighlightText; } }"
     },
     {
-      "name": "MyShows primary action",
-      "kind": "button",
-      "description": "Manual completion or recovery is the primary action for the current episode. Static style specimen.",
-      "html": "<div class=\"ds-specimen\"><button class=\"ds-myshows-button ds-myshows-primary\" type=\"button\">Засчитать серию</button></div>",
-      "css": ".ds-specimen { font-family:var(--font-family, \"Segoe UI Variable\", \"Segoe UI\", system-ui, sans-serif); font-size:var(--text-body, .8125rem); line-height:1.5; color:var(--ink, #222a3b); }\n:where(.ds-specimen button, .ds-specimen input) { font:inherit; color:inherit; }\n.ds-specimen button { cursor:pointer; }\n.ds-specimen button:disabled, .ds-specimen input:disabled { opacity:.65; cursor:default; }\n.ds-specimen :focus-visible { outline:2px solid var(--accent, #4b5fc5); outline-offset:3px; }\n.ds-specimen ::selection { background:var(--accent, #4b5fc5); color:var(--surface, #ffffff); }\n@media (forced-colors:active) { .ds-specimen :focus-visible { outline-color:Highlight; } }\n.ds-myshows-button { min-height:40px; padding:8px 12px; border:1px solid var(--control-border, #77839a); border-radius:var(--radius-control, 8px); background:var(--surface, #ffffff); font-weight:600; }\n.ds-myshows-button:hover { background:var(--hover-surface, #e4e8f1); }\n.ds-myshows-button:active { background:var(--subtle-surface, #e6eaf1); }\n.ds-myshows-button:disabled, .ds-myshows-actions button:disabled { cursor:default; }\n.ds-myshows-primary { background:var(--accent, #4b5fc5); border-color:var(--accent, #4b5fc5); color:var(--surface, #ffffff); }\n.ds-myshows-primary:hover { background:var(--accent-hover, #3d4fae); }\n.ds-myshows-primary:active { background:var(--notice-ink, #38497e); }"
-    },
-    {
-      "name": "MyShows secondary action",
-      "kind": "button",
-      "description": "Resume tracking for a cancelled episode that was not submitted. Static style specimen.",
-      "html": "<div class=\"ds-specimen\"><button class=\"ds-myshows-button\" type=\"button\">Продолжить отслеживание</button></div>",
-      "css": ".ds-specimen { font-family:var(--font-family, \"Segoe UI Variable\", \"Segoe UI\", system-ui, sans-serif); font-size:var(--text-body, .8125rem); line-height:1.5; color:var(--ink, #222a3b); }\n:where(.ds-specimen button, .ds-specimen input) { font:inherit; color:inherit; }\n.ds-specimen button { cursor:pointer; }\n.ds-specimen button:disabled, .ds-specimen input:disabled { opacity:.65; cursor:default; }\n.ds-specimen :focus-visible { outline:2px solid var(--accent, #4b5fc5); outline-offset:3px; }\n.ds-specimen ::selection { background:var(--accent, #4b5fc5); color:var(--surface, #ffffff); }\n@media (forced-colors:active) { .ds-specimen :focus-visible { outline-color:Highlight; } }\n.ds-myshows-button { min-height:40px; padding:8px 12px; border:1px solid var(--control-border, #77839a); border-radius:var(--radius-control, 8px); background:var(--surface, #ffffff); font-weight:600; }\n.ds-myshows-button:hover { background:var(--hover-surface, #e4e8f1); }\n.ds-myshows-button:active { background:var(--subtle-surface, #e6eaf1); }\n.ds-myshows-button:disabled, .ds-myshows-actions button:disabled { cursor:default; }"
-    },
-    {
-      "name": "Current MyShows episode",
+      "name": "Current MyShows viewing",
       "kind": "card",
-      "description": "One grouped task context with measured credit, threshold marker, confirmation and actions. Illustrative values match the verified 0.6.7 test capture; this specimen does not track playback or send requests.",
-      "html": "<div class=\"ds-specimen\"><section class=\"ds-myshows-current\" aria-label=\"Текущая серия\"><div class=\"ds-myshows-current-heading\"><h2 class=\"ds-myshows-journal-title\">Текущая серия</h2><p class=\"ds-myshows-state\" data-status=\"watching\">Смотрю</p></div><div class=\"ds-myshows-current-body\"><h3 class=\"ds-myshows-account\">Тестовый сериал · S01E01</h3><p class=\"ds-myshows-progress\"><span class=\"ds-myshows-progress-credit\">Учтено <strong class=\"ds-myshows-progress-value\">37%</strong></span><span class=\"ds-myshows-progress-threshold\"><span class=\"ds-visually-hidden\"> · </span><span>порог 90%</span></span></p><div class=\"ds-myshows-progress-track\" style=\"--myshows-threshold:90%\"><progress class=\"ds-myshows-progress-meter\" max=\"100\" value=\"37\" aria-label=\"Учтённая часть серии\" aria-valuetext=\"Учтено 37% · порог 90%\"></progress><span class=\"ds-myshows-threshold-marker\" aria-hidden=\"true\"></span></div><p class=\"ds-myshows-confirmation\">Подтверждение позиции: 20 из 30 секунд</p><div class=\"ds-myshows-actions\"><button type=\"button\" class=\"ds-myshows-button ds-myshows-primary\">Засчитать серию</button><button type=\"button\" class=\"ds-text-button\">Отменить отправку</button></div></div></section></div>",
+      "description": "Grouped current viewing with measured credit, threshold, confirmation and actions. Illustrative values; no playback tracking or service requests.",
+      "html": "<div class=\"ds-specimen\"><section class=\"ds-myshows-current\" aria-label=\"Текущий просмотр\"><div class=\"ds-myshows-current-heading\"><h2 class=\"ds-myshows-journal-title\">Текущий просмотр</h2><p class=\"ds-myshows-state\" data-status=\"watching\">Смотрю</p></div><div class=\"ds-myshows-current-body\"><h3 class=\"ds-myshows-account\">Тестовый сериал · S01E01</h3><p class=\"ds-myshows-progress\"><span class=\"ds-myshows-progress-credit\">Учтено <strong class=\"ds-myshows-progress-value\">37%</strong></span><span class=\"ds-myshows-progress-threshold\"><span class=\"ds-visually-hidden\"> · </span><span>порог 90%</span></span></p><div class=\"ds-myshows-progress-track\" style=\"--myshows-threshold:90%\"><progress class=\"ds-myshows-progress-meter\" max=\"100\" value=\"37\" aria-label=\"Учтённая часть просмотра\" aria-valuetext=\"Учтено 37% · порог 90%\"></progress><span class=\"ds-myshows-threshold-marker\" aria-hidden=\"true\"></span></div><p class=\"ds-myshows-confirmation\">Подтверждение позиции: 20 из 30 секунд</p><div class=\"ds-myshows-actions\"><button type=\"button\" class=\"ds-myshows-button ds-myshows-primary\">Засчитать серию</button><button type=\"button\" class=\"ds-text-button\">Отменить отправку</button></div></div></section></div>",
       "css": ".ds-specimen { font-family:var(--font-family, \"Segoe UI Variable\", \"Segoe UI\", system-ui, sans-serif); font-size:var(--text-body, .8125rem); line-height:1.5; color:var(--ink, #222a3b); }\n:where(.ds-specimen button, .ds-specimen input) { font:inherit; color:inherit; }\n.ds-specimen button { cursor:pointer; }\n.ds-specimen button:disabled, .ds-specimen input:disabled { opacity:.65; cursor:default; }\n.ds-specimen :focus-visible { outline:2px solid var(--accent, #4b5fc5); outline-offset:3px; }\n.ds-specimen ::selection { background:var(--accent, #4b5fc5); color:var(--surface, #ffffff); }\n@media (forced-colors:active) { .ds-specimen :focus-visible { outline-color:Highlight; } }\n.ds-myshows-current-heading { display:flex; align-items:baseline; justify-content:space-between; flex-wrap:wrap; gap:4px 12px; margin-bottom:10px; }\n.ds-myshows-current-heading .ds-myshows-journal-title { margin:0; }\n.ds-myshows-current-heading .ds-myshows-state { margin:0; font-size:var(--text-small, .75rem); }\n.ds-myshows-current-body { padding:16px; border:1px solid var(--line, #dfe4ed); border-radius:var(--radius-panel, 11px); background:var(--surface, #ffffff); }\n.ds-myshows-current .ds-myshows-account { font-size:var(--text-title, 1rem); line-height:1.5; margin:0 0 14px; }\n.ds-myshows-current .ds-myshows-description { margin:0 0 8px; }\n.ds-myshows-current .ds-myshows-actions { margin-top:10px; }\n.ds-myshows-current .ds-text-button { font-size:var(--text-small, .75rem); color:var(--muted, #58657a); }\n.ds-myshows-current .ds-text-button:hover { color:var(--ink, #222a3b); }\n.ds-myshows-account { margin:0; font-weight:600; overflow-wrap:anywhere; }\n.ds-myshows-progress { display:flex; align-items:baseline; justify-content:space-between; flex-wrap:wrap; gap:2px 8px; margin:0 0 8px; color:var(--muted, #58657a); font-size:var(--text-small, .75rem); font-variant-numeric:tabular-nums; overflow-wrap:anywhere; }\n.ds-myshows-progress-credit { display:inline-flex; align-items:baseline; gap:6px; }\n.ds-myshows-progress-value { font-size:var(--text-heading, 1.375rem); line-height:1.275; font-weight:600; color:var(--ink, #222a3b); }\n.ds-myshows-progress-threshold { flex:0 1 auto; }\n.ds-myshows-progress-track { position:relative; margin:0 1px 10px; }\n.ds-myshows-progress-meter { appearance:none; display:block; width:100%; height:6px; overflow:hidden; border:0; border-radius:3px; background:var(--subtle-surface, #e6eaf1); color:var(--accent, #4b5fc5); }\n.ds-myshows-progress-meter::-webkit-progress-bar { background:var(--subtle-surface, #e6eaf1); border-radius:3px; }\n.ds-myshows-progress-meter::-webkit-progress-value { background:var(--accent, #4b5fc5); border-radius:3px; }\n.ds-myshows-progress-meter::-moz-progress-bar { background:var(--accent, #4b5fc5); border-radius:3px; }\n.ds-myshows-threshold-marker { position:absolute; left:var(--myshows-threshold); top:-3px; width:2px; height:12px; margin-left:-1px; border-radius:1px; background:var(--muted, #58657a); }\n.ds-myshows-confirmation { min-height:3.2em; margin:0; color:var(--muted, #58657a); font-size:var(--text-small, .75rem); line-height:1.6; font-variant-numeric:tabular-nums; overflow-wrap:anywhere; }\n.ds-myshows-journal-title { font-size:var(--text-title, 1rem); line-height:1.375; margin:22px 0 8px; font-weight:600; }\n.ds-myshows-actions { display:flex; align-items:center; flex-wrap:wrap; gap:4px 8px; }\n.ds-myshows-state { color:var(--notice-ink, #38497e); font-weight:600; overflow-wrap:anywhere; }\n.ds-myshows-state[data-status=\"done\"] { color:var(--success, #30735e); }\n.ds-myshows-state[data-status=\"attention\"] { color:var(--error-ink, #9a3139); }\n.ds-myshows-state[data-status=\"cancelled\"] { color:var(--muted, #58657a); }\n.ds-myshows-button { min-height:40px; padding:8px 12px; border:1px solid var(--control-border, #77839a); border-radius:var(--radius-control, 8px); background:var(--surface, #ffffff); font-weight:600; }\n.ds-myshows-button:hover { background:var(--hover-surface, #e4e8f1); }\n.ds-myshows-button:active { background:var(--subtle-surface, #e6eaf1); }\n.ds-myshows-button:disabled, .ds-myshows-actions button:disabled { cursor:default; }\n.ds-myshows-primary { background:var(--accent, #4b5fc5); border-color:var(--accent, #4b5fc5); color:var(--surface, #ffffff); }\n.ds-myshows-primary:hover { background:var(--accent-hover, #3d4fae); }\n.ds-myshows-primary:active { background:var(--notice-ink, #38497e); }\n.ds-text-button { background:none; border:0; min-height:44px; padding:8px 4px; color:var(--accent, #4b5fc5); text-underline-offset:3px; }\n.ds-text-button:hover { text-decoration:underline; }\n.ds-visually-hidden { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; border:0; }\n@media (forced-colors:active) { .ds-myshows-progress-meter { appearance:auto; } .ds-myshows-threshold-marker { background:CanvasText; forced-color-adjust:none; } }"
-    },
-    {
-      "name": "Journal filters",
-      "kind": "nav",
-      "description": "Underline selection and counts for queue, attention and history. Illustrative counts; static style specimen.",
-      "html": "<div class=\"ds-specimen\"><div class=\"ds-myshows-filters\" role=\"group\" aria-label=\"Записи синхронизации\"><button class=\"ds-myshows-button\" type=\"button\" aria-pressed=\"true\">Очередь <span class=\"ds-myshows-filter-count\">2</span></button><button class=\"ds-myshows-button\" type=\"button\" aria-pressed=\"false\">Внимание <span class=\"ds-myshows-filter-count\">1</span></button><button class=\"ds-myshows-button\" type=\"button\" aria-pressed=\"false\">История <span class=\"ds-myshows-filter-count\">2</span></button></div></div>",
-      "css": ".ds-specimen { font-family:var(--font-family, \"Segoe UI Variable\", \"Segoe UI\", system-ui, sans-serif); font-size:var(--text-body, .8125rem); line-height:1.5; color:var(--ink, #222a3b); }\n:where(.ds-specimen button, .ds-specimen input) { font:inherit; color:inherit; }\n.ds-specimen button { cursor:pointer; }\n.ds-specimen button:disabled, .ds-specimen input:disabled { opacity:.65; cursor:default; }\n.ds-specimen :focus-visible { outline:2px solid var(--accent, #4b5fc5); outline-offset:3px; }\n.ds-specimen ::selection { background:var(--accent, #4b5fc5); color:var(--surface, #ffffff); }\n@media (forced-colors:active) { .ds-specimen :focus-visible { outline-color:Highlight; } }\n.ds-myshows-button { min-height:40px; padding:8px 12px; border:1px solid var(--control-border, #77839a); border-radius:var(--radius-control, 8px); background:var(--surface, #ffffff); font-weight:600; }\n.ds-myshows-button:hover { background:var(--hover-surface, #e4e8f1); }\n.ds-myshows-button:active { background:var(--subtle-surface, #e6eaf1); }\n.ds-myshows-button:disabled, .ds-myshows-actions button:disabled { cursor:default; }\n.ds-myshows-filters { display:flex; gap:8px; margin:0; border-bottom:1px solid var(--line, #dfe4ed); }\n.ds-myshows-filters button { display:flex; align-items:center; justify-content:center; flex:1; flex-wrap:wrap; gap:2px 6px; min-width:0; padding:10px 2px; border:0; border-bottom:2px solid transparent; border-radius:0; background:transparent; color:var(--muted, #58657a); font-size:var(--text-small, .75rem); font-variant-numeric:tabular-nums; overflow-wrap:anywhere; }\n.ds-myshows-filters button:hover { color:var(--ink, #222a3b); background:var(--hover-surface, #e4e8f1); }\n.ds-myshows-filters [aria-pressed=\"true\"] { border-bottom-color:var(--accent, #4b5fc5); color:var(--accent, #4b5fc5); }\n.ds-myshows-filter-count { font-weight:400; }\n@media (forced-colors:active) { .ds-myshows-filters [aria-pressed=\"true\"] { border-bottom-color:Highlight; } }"
     },
     {
       "name": "Journal entry",
       "kind": "custom",
-      "description": "Compact episode identity and status above supporting text, actions and persistent native history disclosure. Illustrative record; only the disclosure is interactive in this specimen.",
-      "html": "<div class=\"ds-specimen\"><article class=\"ds-myshows-entry\"><div class=\"ds-myshows-entry-meta\"><div class=\"ds-myshows-entry-identity\"><h3>Тестовый сериал</h3><span class=\"ds-myshows-episode\">S01E01</span></div><span class=\"ds-myshows-state\" data-status=\"watching\">Смотрю</span></div><p class=\"ds-myshows-description\">Учтено 37% · порог 90%</p><div class=\"ds-myshows-actions\"><button class=\"ds-text-button\" type=\"button\">Засчитать серию</button><button class=\"ds-text-button\" type=\"button\" data-myshows-action=\"example-cancel\">Отменить отправку</button></div><details class=\"ds-myshows-events\"><summary>История · 1 нояб., 08:21</summary><ol><li>1 нояб., 08:21 · Начат просмотр</li></ol></details></article></div>",
-      "css": ".ds-specimen { font-family:var(--font-family, \"Segoe UI Variable\", \"Segoe UI\", system-ui, sans-serif); font-size:var(--text-body, .8125rem); line-height:1.5; color:var(--ink, #222a3b); }\n:where(.ds-specimen button, .ds-specimen input) { font:inherit; color:inherit; }\n.ds-specimen button { cursor:pointer; }\n.ds-specimen button:disabled, .ds-specimen input:disabled { opacity:.65; cursor:default; }\n.ds-specimen :focus-visible { outline:2px solid var(--accent, #4b5fc5); outline-offset:3px; }\n.ds-specimen ::selection { background:var(--accent, #4b5fc5); color:var(--surface, #ffffff); }\n@media (forced-colors:active) { .ds-specimen :focus-visible { outline-color:Highlight; } }\n.ds-text-button { background:none; border:0; min-height:44px; padding:8px 4px; color:var(--accent, #4b5fc5); text-underline-offset:3px; }\n.ds-text-button:hover { text-decoration:underline; }\n.ds-myshows-description { color:var(--muted, #58657a); font-size:var(--text-small, .75rem); line-height:1.6; margin:5px 0 9px; overflow-wrap:anywhere; }\n.ds-myshows-actions { display:flex; align-items:center; flex-wrap:wrap; gap:4px 8px; }\n.ds-myshows-entry { padding:14px 0; border-bottom:1px solid var(--line, #dfe4ed); }\n.ds-myshows-entry h3 { font-size:var(--text-body, .8125rem); font-weight:600; line-height:1.5; margin:0; overflow-wrap:anywhere; }\n.ds-myshows-entry-meta { display:flex; flex-wrap:wrap; align-items:baseline; justify-content:space-between; gap:4px 12px; margin-bottom:6px; font-size:var(--text-small, .75rem); }\n.ds-myshows-entry-identity { display:flex; flex-wrap:wrap; align-items:baseline; gap:2px 8px; min-width:0; }\n.ds-myshows-entry .ds-myshows-description { margin:4px 0; }\n.ds-myshows-entry .ds-myshows-actions { margin-top:6px; column-gap:16px; }\n.ds-myshows-entry .ds-text-button { min-height:36px; padding:6px 0; font-size:var(--text-small, .75rem); }\n.ds-myshows-entry [data-myshows-action$=\"-cancel\"] { color:var(--muted, #58657a); }\n.ds-myshows-episode { color:var(--muted, #58657a); font-variant-numeric:tabular-nums; }\n.ds-myshows-state { color:var(--notice-ink, #38497e); font-weight:600; overflow-wrap:anywhere; }\n.ds-myshows-state[data-status=\"done\"] { color:var(--success, #30735e); }\n.ds-myshows-state[data-status=\"attention\"] { color:var(--error-ink, #9a3139); }\n.ds-myshows-state[data-status=\"cancelled\"] { color:var(--muted, #58657a); }\n.ds-myshows-events { color:var(--muted, #58657a); font-size:var(--text-small, .75rem); }\n.ds-myshows-events summary { cursor:pointer; padding:6px 0; min-height:32px; font-variant-numeric:tabular-nums; }\n.ds-myshows-events summary:hover { color:var(--ink, #222a3b); }\n.ds-myshows-events ol { padding-left:18px; margin:4px 0 8px; }\n.ds-myshows-events li { margin:5px 0; overflow-wrap:anywhere; font-variant-numeric:tabular-nums; }"
+      "description": "Current compact completed row with three icon controls and a native nonmodal details popover. Synthetic record; remote navigation and local reset are inert examples.",
+      "html": "<div class=\"ds-specimen\"><article class=\"ds-myshows-entry\"><div class=\"ds-myshows-entry-meta\"><div class=\"ds-myshows-entry-identity\"><h3 title=\"Тестовый сериал\">Тестовый сериал</h3><span class=\"ds-myshows-episode\">S01E01</span></div><div class=\"ds-myshows-entry-icons\"><button class=\"ds-myshows-icon-button\" type=\"button\" data-status=\"done\" popovertarget=\"ds-journal-details\" aria-haspopup=\"dialog\" aria-controls=\"ds-journal-details\" aria-label=\"Сведения об отметке: Тестовый сериал · S01E01. Просмотрено\" title=\"Просмотрено. Сведения об отметке\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\" focusable=\"false\"><circle cx=\"12\" cy=\"12\" r=\"9\"/><path d=\"m8 12 3 3 5-6\"/></svg></button><a class=\"ds-myshows-icon-button\" role=\"link\" tabindex=\"0\" aria-label=\"Открыть серию в MyShows\" title=\"Открыть серию в MyShows\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\" focusable=\"false\"><path d=\"M14 4h6v6m0-6L10 14M10 5H5a1 1 0 0 0-1 1v13a1 1 0 0 0 1 1h13a1 1 0 0 0 1-1v-5\"/></svg></a><button class=\"ds-myshows-icon-button\" type=\"button\" aria-label=\"Сбросить запись\" title=\"Сбросить запись\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\" focusable=\"false\"><path d=\"M4 4v6h6M4 10a8 8 0 1 1 0 5\"/></svg></button></div></div></article><div class=\"ds-myshows-info\" id=\"ds-journal-details\" popover=\"auto\" role=\"dialog\" aria-labelledby=\"ds-journal-title\"><div class=\"ds-myshows-info-header\"><h2 id=\"ds-journal-title\">Тестовый сериал · S01E01</h2><button class=\"ds-myshows-icon-button\" type=\"button\" popovertarget=\"ds-journal-details\" popovertargetaction=\"hide\" aria-label=\"Закрыть сведения\" title=\"Закрыть сведения\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\" focusable=\"false\"><path d=\"m6 6 12 12M6 18 18 6\"/></svg></button></div><p class=\"ds-myshows-state\" data-status=\"done\">Просмотрено</p><h3>История</h3><ol class=\"ds-myshows-events\"><li>Иллюстративная запись: отметка подтверждена.</li></ol></div></div>",
+      "css": ".ds-specimen{--canvas:#f2f4f8;--surface:#ffffff;--ink:#222a3b;--muted:#58657a;--accent:#4b5fc5;--accent-hover:#3d4fae;--line:#dfe4ed;--control-border:#77839a;--control-off:#77839a;--subtle-surface:#e6eaf1;--hover-surface:#e4e8f1;--success:#30735e;--notice-ink:#38497e;--notice-surface:#e8edf9;--error-ink:#9a3139;--error-surface:#fce9ec;--selection-shadow:0 1px 3px #222a3b14;--font-family:\"Segoe UI Variable\", \"Segoe UI\", system-ui, sans-serif;--text-small:.75rem;--text-body:.8125rem;--text-title:1rem;--text-brand:1.0625rem;--text-heading:1.375rem;--radius-control:8px;--radius-panel:11px;--space-edge:22px;--motion-fast:150ms;font-family:var(--font-family);font-size:var(--text-body);line-height:1.5;color:var(--ink)} .ds-specimen button{font:inherit;cursor:pointer} .ds-specimen :focus-visible{outline:2px solid var(--accent);outline-offset:3px} .ds-specimen svg{fill:none;stroke:currentColor;stroke-width:1.65;stroke-linecap:round;stroke-linejoin:round} .ds-myshows-entry { padding:8px 0; border-bottom:1px solid var(--line); }\n.ds-myshows-entry h3 { min-width:0; font-size:var(--text-body); font-weight:600; line-height:1.5; margin:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }\n.ds-myshows-entry-meta { display:flex; align-items:center; gap:8px; font-size:var(--text-small); }\n.ds-myshows-entry-identity { display:flex; flex:1; align-items:baseline; gap:8px; min-width:0; }\n.ds-myshows-entry-identity .ds-myshows-episode { flex:0 0 auto; white-space:nowrap; }\n.ds-myshows-entry-icons { display:flex; flex:0 0 auto; align-items:center; gap:2px; }\n.ds-myshows-icon-button { display:inline-flex; align-items:center; justify-content:center; flex:0 0 32px; width:32px; min-height:36px; padding:6px; border:0; border-radius:var(--radius-control); background:transparent; color:var(--muted); text-decoration:none; }\n.ds-myshows-icon-button svg { width:18px; height:18px; }\n.ds-myshows-icon-button:hover { color:var(--accent); background:var(--hover-surface); }\n.ds-myshows-icon-button:active { background:var(--subtle-surface); }\n.ds-myshows-icon-button:disabled { cursor:default; }\n.ds-myshows-icon-button[data-status=\"done\"] { color:var(--success); }\n.ds-myshows-icon-button[data-status=\"attention\"] { color:var(--error-ink); }\n.ds-myshows-icon-button[aria-expanded=\"true\"] { background:var(--subtle-surface); }\n.ds-myshows-entry > .ds-myshows-state { display:block; font-size:var(--text-small); }\n.ds-myshows-episode { color:var(--muted); font-variant-numeric:tabular-nums; }\n.ds-myshows-state { color:var(--notice-ink); font-weight:600; overflow-wrap:anywhere; }\n.ds-myshows-state[data-status=\"done\"] { color:var(--success); }\n.ds-myshows-state[data-status=\"attention\"] { color:var(--error-ink); }\n.ds-myshows-state[data-status=\"cancelled\"], .ds-myshows-state[data-status=\"reset\"] { color:var(--muted); }\n.ds-myshows-entry .ds-myshows-description { margin:4px 0; }\n.ds-myshows-entry .ds-myshows-actions { margin-top:2px; column-gap:16px; }\n.ds-myshows-entry .ds-text-button { min-height:36px; padding:6px 0; font-size:var(--text-small); }\n.ds-myshows-entry [data-myshows-action$=\"-cancel\"] { color:var(--muted); }\n.ds-myshows-info { width:calc(100% - 32px); max-width:26rem; max-height:calc(100dvh - 32px); margin:auto; padding:16px; border:1px solid var(--control-border); border-radius:var(--radius-panel); background:var(--surface); color:var(--ink); overflow:auto; overscroll-behavior:contain; }\n.ds-myshows-info-header { display:flex; align-items:flex-start; gap:12px; }\n.ds-myshows-info-header h2 { flex:1; min-width:0; margin:4px 0 12px; font-size:var(--text-title); overflow-wrap:anywhere; }\n.ds-myshows-info .ds-myshows-state { margin:0 0 4px; font-size:var(--text-small); }\n.ds-myshows-info h3 { margin:16px 0 8px; font-size:var(--text-body); font-weight:600; }\n.ds-myshows-events { margin:0; padding-left:18px; color:var(--muted); font-size:var(--text-small); }\n.ds-myshows-events li { margin:5px 0; overflow-wrap:anywhere; font-variant-numeric:tabular-nums; }"
+    },
+    {
+      "name": "Site primary action",
+      "kind": "button",
+      "refersTo": "site-button-primary",
+      "description": "Search primary action. Site theme tokens, independent of the panel palette; static example.",
+      "html": "<div class=\"ds-site\"><button type=\"button\" class=\"ds-primary\">Найти</button></div>",
+      "css": ".ds-site{--surface: #fff; --inset: #f3f5f7; --ink: #222a30; --muted: #53616a;\n    --line: #d6dce1; --control: #7a8791; --accent: #315b86; --accent-hover: #244565;\n    --on-accent: #fff; --error-bg: #fff0ee; --error-ink: #9d2820;\n    color: var(--ink); font-family: inherit; font-size: 16px;\n    line-height: 1.5; color-scheme: light;font-family:Arial,sans-serif;background:var(--surface)} .ds-site[data-theme=\"dark\"]{--surface: #08171d; --inset: #1e2d34; --ink: #edf2f4; --muted: #a6b7bf;\n    --line: #34464f; --control: #70848e; --accent: #a7cce6; --accent-hover: #c3e0f2;\n    --on-accent: #102530; --error-bg: #372123; --error-ink: #ffb8b1;\n    color-scheme: dark;} .ds-site :focus-visible{outline:2px solid var(--accent);outline-offset:3px} .ds-site ::selection{background:var(--accent);color:var(--on-accent)} .ds-site button{font:inherit;min-height:44px;border:1px solid var(--control);border-radius:6px;background:var(--surface);color:var(--ink);padding:9px 16px;cursor:pointer}.ds-site button:hover{background:var(--inset);border-color:var(--accent)}.ds-site button:active{transform:translateY(1px)}.ds-site button:disabled{cursor:default;opacity:.65}.ds-site button.ds-primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent);font-weight:600}.ds-site button.ds-primary:hover{background:var(--accent-hover);border-color:var(--accent-hover)}@media(prefers-reduced-motion:reduce){.ds-site button:active{transform:none}}@media(forced-colors:active){.ds-site button{border:1px solid ButtonText}.ds-site :focus-visible{outline-color:Highlight}}"
+    },
+    {
+      "name": "Site secondary action",
+      "kind": "button",
+      "description": "Bordered supporting search action; static example.",
+      "html": "<div class=\"ds-site\"><button type=\"button\">Применить фильтры</button></div>",
+      "css": ".ds-site{--surface: #fff; --inset: #f3f5f7; --ink: #222a30; --muted: #53616a;\n    --line: #d6dce1; --control: #7a8791; --accent: #315b86; --accent-hover: #244565;\n    --on-accent: #fff; --error-bg: #fff0ee; --error-ink: #9d2820;\n    color: var(--ink); font-family: inherit; font-size: 16px;\n    line-height: 1.5; color-scheme: light;font-family:Arial,sans-serif;background:var(--surface)} .ds-site[data-theme=\"dark\"]{--surface: #08171d; --inset: #1e2d34; --ink: #edf2f4; --muted: #a6b7bf;\n    --line: #34464f; --control: #70848e; --accent: #a7cce6; --accent-hover: #c3e0f2;\n    --on-accent: #102530; --error-bg: #372123; --error-ink: #ffb8b1;\n    color-scheme: dark;} .ds-site :focus-visible{outline:2px solid var(--accent);outline-offset:3px} .ds-site ::selection{background:var(--accent);color:var(--on-accent)} .ds-site button{font:inherit;min-height:44px;border:1px solid var(--control);border-radius:6px;background:var(--surface);color:var(--ink);padding:9px 16px;cursor:pointer}.ds-site button:hover{background:var(--inset);border-color:var(--accent)}.ds-site button:active{transform:translateY(1px)}.ds-site button:disabled{cursor:default;opacity:.65}.ds-site button.ds-primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent);font-weight:600}.ds-site button.ds-primary:hover{background:var(--accent-hover);border-color:var(--accent-hover)}@media(prefers-reduced-motion:reduce){.ds-site button:active{transform:none}}@media(forced-colors:active){.ds-site button{border:1px solid ButtonText}.ds-site :focus-visible{outline-color:Highlight}}"
+    },
+    {
+      "name": "Site query field",
+      "kind": "input",
+      "refersTo": "site-input",
+      "description": "Visible query label and flexible field with site typography. Input is editable but does not issue requests.",
+      "html": "<div class=\"ds-site\"><label class=\"ds-query-label\" for=\"ds-site-query\">Название фильма или сериала</label><input id=\"ds-site-query\" class=\"ds-query-input\" type=\"search\" placeholder=\"Название\"></div>",
+      "css": ".ds-site{--surface: #fff; --inset: #f3f5f7; --ink: #222a30; --muted: #53616a;\n    --line: #d6dce1; --control: #7a8791; --accent: #315b86; --accent-hover: #244565;\n    --on-accent: #fff; --error-bg: #fff0ee; --error-ink: #9d2820;\n    color: var(--ink); font-family: inherit; font-size: 16px;\n    line-height: 1.5; color-scheme: light;font-family:Arial,sans-serif;background:var(--surface)} .ds-site[data-theme=\"dark\"]{--surface: #08171d; --inset: #1e2d34; --ink: #edf2f4; --muted: #a6b7bf;\n    --line: #34464f; --control: #70848e; --accent: #a7cce6; --accent-hover: #c3e0f2;\n    --on-accent: #102530; --error-bg: #372123; --error-ink: #ffb8b1;\n    color-scheme: dark;} .ds-site :focus-visible{outline:2px solid var(--accent);outline-offset:3px} .ds-site ::selection{background:var(--accent);color:var(--on-accent)} .ds-query-label{display:block;margin-bottom:8px;font-size:.875em;font-weight:600}.ds-query-input{box-sizing:border-box;width:100%;min-height:44px;padding:9px 11px;color:var(--ink);background:var(--surface);border:1px solid var(--control);border-radius:6px;caret-color:var(--accent);font:inherit;font-size:1.0625em}.ds-query-input::placeholder{color:var(--muted);opacity:1}"
+    },
+    {
+      "name": "Saved filter set selector",
+      "kind": "input",
+      "refersTo": "site-preset-select",
+      "description": "Native saved-set selector aligned with the filter fields. Synthetic option demonstrates selection only; no saved records or search state are changed. The dark theme uses data-theme=\"dark\" on the specimen wrapper.",
+      "html": "<div class=\"ds-site\"><div class=\"ds-preset-field\"><select aria-label=\"Сохранённые наборы\"><option value=\"\">Сохранённые наборы</option><option value=\"example\">Пример набора</option></select><svg class=\"ds-preset-chevron\" viewBox=\"0 0 20 20\" aria-hidden=\"true\" focusable=\"false\"><path d=\"m5 7.5 5 5 5-5\"/></svg></div></div>",
+      "css": ".ds-site{--surface: #fff; --inset: #f3f5f7; --ink: #222a30; --muted: #53616a;\n    --line: #d6dce1; --control: #7a8791; --accent: #315b86; --accent-hover: #244565;\n    --on-accent: #fff; --error-bg: #fff0ee; --error-ink: #9d2820;\n    color: var(--ink); font-family: inherit; font-size: 16px;\n    line-height: 1.5; color-scheme: light;font-family:Arial,sans-serif;background:var(--surface)} .ds-site[data-theme=\"dark\"]{--surface: #08171d; --inset: #1e2d34; --ink: #edf2f4; --muted: #a6b7bf;\n    --line: #34464f; --control: #70848e; --accent: #a7cce6; --accent-hover: #c3e0f2;\n    --on-accent: #102530; --error-bg: #372123; --error-ink: #ffb8b1;\n    color-scheme: dark;} .ds-site :focus-visible{outline:2px solid var(--accent);outline-offset:3px} .ds-site ::selection{background:var(--accent);color:var(--on-accent)} .ds-site{--filter-column-width:230px;--filter-inset:24px}.ds-preset-field{position: relative; width: calc(var(--filter-column-width) - var(--filter-inset) - 1px); max-width: 100%;}.ds-preset-field > select{box-sizing:border-box;font:inherit;width: 100%; min-height: 44px; padding: 9px 11px; color: var(--ink); background: var(--surface); border: 1px solid var(--control); border-radius: 6px; caret-color: var(--accent);display: block; appearance: none; padding-right: 44px; font-size: .875em; text-overflow: ellipsis; cursor: pointer;}.ds-preset-chevron{position: absolute; top: 50%; right: 13px; width: 18px; height: 18px; transform: translateY(-50%); fill: none; stroke: currentColor; stroke-width: 1.5; pointer-events: none;}.ds-preset-field > select:disabled{cursor:default;opacity:.65}.ds-preset-field > select:disabled + .ds-preset-chevron{opacity: .65;}@media (forced-colors:active){.ds-preset-field > select{appearance:auto;padding-right:22px;border:1px solid ButtonText}.ds-preset-chevron{display:none}.ds-site :focus-visible{outline-color:Highlight}}"
+    },
+    {
+      "name": "Applied search filter",
+      "kind": "chip",
+      "refersTo": "site-filter-chip",
+      "description": "Removable filter with a full accessible removal name. Synthetic filter; static example.",
+      "html": "<div class=\"ds-site\"><button class=\"ds-chip\" type=\"button\" aria-label=\"Убрать фильтр: Тип: Сериалы\">Тип: Сериалы<svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"m6 6 12 12M6 18 18 6\"/></svg></button></div>",
+      "css": ".ds-site{--surface: #fff; --inset: #f3f5f7; --ink: #222a30; --muted: #53616a;\n    --line: #d6dce1; --control: #7a8791; --accent: #315b86; --accent-hover: #244565;\n    --on-accent: #fff; --error-bg: #fff0ee; --error-ink: #9d2820;\n    color: var(--ink); font-family: inherit; font-size: 16px;\n    line-height: 1.5; color-scheme: light;font-family:Arial,sans-serif;background:var(--surface)} .ds-site[data-theme=\"dark\"]{--surface: #08171d; --inset: #1e2d34; --ink: #edf2f4; --muted: #a6b7bf;\n    --line: #34464f; --control: #70848e; --accent: #a7cce6; --accent-hover: #c3e0f2;\n    --on-accent: #102530; --error-bg: #372123; --error-ink: #ffb8b1;\n    color-scheme: dark;} .ds-site :focus-visible{outline:2px solid var(--accent);outline-offset:3px} .ds-site ::selection{background:var(--accent);color:var(--on-accent)} .ds-site button{font:inherit;min-height:44px;border:1px solid var(--control);border-radius:6px;background:var(--surface);color:var(--ink);padding:9px 16px;cursor:pointer}.ds-site button:hover{background:var(--inset);border-color:var(--accent)}.ds-site button:active{transform:translateY(1px)}.ds-site button:disabled{cursor:default;opacity:.65}.ds-site button.ds-primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent);font-weight:600}.ds-site button.ds-primary:hover{background:var(--accent-hover);border-color:var(--accent-hover)}@media(prefers-reduced-motion:reduce){.ds-site button:active{transform:none}}@media(forced-colors:active){.ds-site button{border:1px solid ButtonText}.ds-site :focus-visible{outline-color:Highlight}}.ds-site .ds-chip{display:inline-flex;align-items:center;gap:10px;text-align:left;max-width:100%;overflow-wrap:anywhere;font-size:.8125em;padding:7px 10px;background:var(--inset);border-color:var(--line)}.ds-chip svg{width:14px;height:14px;flex:0 0 14px;fill:none;stroke:currentColor;stroke-width:1.5}"
+    },
+    {
+      "name": "Catalogue viewing states",
+      "kind": "card",
+      "refersTo": "catalogue-poster",
+      "description": "One real poster in three simulated states. Labels above cards belong only to this comparison; production adds no visible watching badge. Watched content restores on hover or keyboard focus.",
+      "html": "<div class=\"ds-site\"><svg class=\"ds-watching-filter\" aria-hidden=\"true\" focusable=\"false\" xmlns=\"http://www.w3.org/2000/svg\"><defs><filter id=\"ds-watching-bronze\" color-interpolation-filters=\"sRGB\"><feColorMatrix type=\"saturate\" values=\"0\"/><feComponentTransfer><feFuncR type=\"table\" tableValues=\"0.10 0.98\"/><feFuncG type=\"table\" tableValues=\"0.055 0.78\"/><feFuncB type=\"table\" tableValues=\"0.018 0.32\"/></feComponentTransfer></filter></defs></svg><div class=\"ds-card-grid\"><div><p class=\"ds-example-state\">Не смотрел</p><article class=\"ds-card ds-unseen\"><a class=\"ds-card-link\" role=\"link\" tabindex=\"0\" aria-describedby=\"ds-status-unseen\"><div class=\"ds-poster\"><img src=\"data:image/jpeg;base64,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\" alt=\"Постер сериала Менталист\"></div><span class=\"ds-card-type\">Сериал</span><h3>Менталист</h3><p>2008–2015, США, Детективы</p></a><span class=\"ds-visually-hidden\" id=\"ds-status-unseen\">Не смотрел</span></article></div><div><p class=\"ds-example-state\">Смотрю</p><article class=\"ds-card ds-watching\"><a class=\"ds-card-link\" role=\"link\" tabindex=\"0\" aria-describedby=\"ds-status-watching\"><div class=\"ds-poster\"><img src=\"data:image/jpeg;base64,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\" alt=\"Постер сериала Менталист\"></div><span class=\"ds-card-type\">Сериал</span><h3>Менталист</h3><p>2008–2015, США, Детективы</p></a><span class=\"ds-visually-hidden\" id=\"ds-status-watching\">Смотрю</span></article></div><div><p class=\"ds-example-state\">Просмотрено</p><article class=\"ds-card ds-watched\"><a class=\"ds-card-link\" role=\"link\" tabindex=\"0\" aria-describedby=\"ds-status-watched\"><div class=\"ds-poster\"><img src=\"data:image/jpeg;base64,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\" alt=\"Постер сериала Менталист\"></div><span class=\"ds-card-type\">Сериал</span><h3>Менталист</h3><p>2008–2015, США, Детективы</p></a><span class=\"ds-visually-hidden\" id=\"ds-status-watched\">Просмотрено</span></article></div></div></div>",
+      "css": ".ds-site{--surface: #fff; --inset: #f3f5f7; --ink: #222a30; --muted: #53616a;\n    --line: #d6dce1; --control: #7a8791; --accent: #315b86; --accent-hover: #244565;\n    --on-accent: #fff; --error-bg: #fff0ee; --error-ink: #9d2820;\n    color: var(--ink); font-family: inherit; font-size: 16px;\n    line-height: 1.5; color-scheme: light;font-family:Arial,sans-serif;background:var(--surface)} .ds-site[data-theme=\"dark\"]{--surface: #08171d; --inset: #1e2d34; --ink: #edf2f4; --muted: #a6b7bf;\n    --line: #34464f; --control: #70848e; --accent: #a7cce6; --accent-hover: #c3e0f2;\n    --on-accent: #102530; --error-bg: #372123; --error-ink: #ffb8b1;\n    color-scheme: dark;} .ds-site :focus-visible{outline:2px solid var(--accent);outline-offset:3px} .ds-site ::selection{background:var(--accent);color:var(--on-accent)} .ds-card-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:28px 16px}.ds-card{min-width:0}.ds-example-state{font-size:13px;line-height:18px;margin:0 0 12px}.ds-card-link{display:block;border-radius:5px;color:inherit;text-decoration:none;cursor:pointer;text-underline-offset:3px}.ds-card-link:hover h3{text-decoration:underline}.ds-poster{width:100%;aspect-ratio:2/3;display:grid;place-items:center;background:var(--inset);border-radius:5px;overflow:hidden}.ds-poster img{width:100%;height:100%;object-fit:cover}.ds-card-type{display:block;margin:12px 0 6px;color:var(--muted);font-size:13px;line-height:18px}.ds-card h3{margin:0;color:var(--ink);font-size:16px;line-height:22px;font-weight:600;overflow-wrap:anywhere}.ds-card p{margin:6px 0 0;color:var(--muted);font-size:14px;line-height:20px;overflow-wrap:anywhere}.ds-watching .ds-poster img{filter:url(\"#ds-watching-bronze\") brightness(.7)}.ds-watched{opacity:.1;filter:grayscale(1)}.ds-watched:hover,.ds-watched:focus-within{opacity:1;filter:none}.ds-watching-filter{position:absolute;width:0;height:0;overflow:hidden;pointer-events:none}.ds-visually-hidden{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}"
     }
   ],
   "narrative": {
-    "overview": "This records the existing light settings interface, moved to a full-height side panel in 0.3.0. Version 0.6.3 has four sections: appearance, player, hiding blocks and MyShows. The country-filter section was removed at the user's request; catalogue selection remains available through advanced search. Its authority is the shipped interface, the user's request to preserve its appearance, and the menu design notes. It preserves the established identity; no new brand metaphor or unconfirmed aesthetic preference is introduced.\n\nShort Russian labels, familiar Windows typography, cool neutral surfaces and one indigo accent make controls easy to scan. The logo and four-section navigation distinguish the interface. Setting rows carry most content; a white panel groups the numeric width choices. The decorative width preview was removed in 0.3.2 at the user's request.",
-    "keyCharacteristics": [],
+    "overview": "Rezka Custom preserves two established interface families: a light, full-height extension panel and controls integrated into Rezka's catalogue and advanced search. The panel has three sections: appearance, player and MyShows. Advertising switches and comment collapsing are in appearance. On-site features inherit the site's chosen font and theme. Neither family supplies a replacement brand for the other. This record preserves the accepted visual decisions; no new metaphor or aesthetic direction is introduced.\n\nShort Russian labels, familiar typography, restrained borders and clear state feedback make the controls easy to scan. The panel uses cool neutral surfaces and an indigo accent; on-site search uses slate blue in the light theme and pale blue on deep teal in the dark theme. Catalogue posters remain the main visual content. The owner-selected bronze-gold treatment identifies incomplete viewing through the poster itself, while the existing subdued treatment identifies completed titles.",
+    "keyCharacteristics": [
+      "Compact controls with explicit Russian labels and visible keyboard focus.",
+      "Separate panel and site typography, palettes and layout proportions.",
+      "Shared catalogue/search caption roles and three distinct viewing states.",
+      "Flat content surfaces; depth reserved for selection and transient controls."
+    ],
     "rules": [],
     "dos": [
       "Do use semantic tokens and verify actual text/background and control/background pairs.",
       "Do fill the available panel height and verify the real side panel in the user's existing Chrome at their current display scale.",
       "Do keep labels, keyboard operation, long-content wrapping and recovery paths.",
+      "Do preserve the site's selected font and theme for catalogue and advanced search.",
+      "Do share caption roles and spacing between native cards and search results.",
+      "Do align the saved-set selector with the filter fields, including its text inset and chevron geometry.",
+      "Do apply the selected bronze treatment only to the poster and retain an accessible viewing-status description.",
+      "Do keep completed history readable and the watched action independent of card dimming.",
       "Do distinguish source/DOM checks from rendered layout, screen-reader and real-service acceptance."
     ],
     "donts": [
-      "Don't introduce a new type family, dark theme or brand metaphor during routine polishing.",
+      "Don't introduce a new panel type family, panel dark theme or brand metaphor during routine polishing.",
+      "Don't replace the site's existing dark theme with the panel's light palette.",
+      "Don't add a visible badge, outline or title tint to the selected watching treatment.",
       "Don't clear the active search or move focus when the browser tab changes.",
       "Don't accept a fixed-size preview or disposable profile as acceptance in the user's installed Chrome."
     ]

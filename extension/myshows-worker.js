@@ -9,7 +9,7 @@
         account: 'В MyShows открыт другой аккаунт. Войдите в подключённый аккаунт и повторите проверку.',
         token: 'Откройте «Токен» в истории MyShows и создайте API-токен. Затем подключите аккаунт снова.',
         auth: 'MyShows отклонил токен. Подключите аккаунт снова.',
-        identity: 'На странице нет идентификатора IMDb. Автоматическое сопоставление недоступно.',
+        identity: 'Для сопоставления нужны IMDb или название и год выпуска. На странице не хватает данных.',
         match: 'MyShows не нашёл точное соответствие. Сопоставьте запись в истории MyShows, подтвердите её и нажмите «Проверить».',
         manual: 'Сопоставьте и подтвердите эту запись в истории MyShows, затем нажмите «Проверить».',
         missing: 'Запись пока не найдена в истории MyShows. Повторная отправка остановлена, чтобы не создать дубль.',
@@ -174,7 +174,9 @@
             const who = await site(tabId, { type: 'myshows:site-account' });
             if (who.account !== entry.account) throw fail('account');
             if (!entry.submittedAt) {
-                if (!entry.episode.imdb) throw fail('identity');
+                // MyShows also accepts title + year with an empty ids object. Such
+                // submissions need native user confirmation, even if the API says exact.
+                if (!entry.episode.imdb && !entry.episode.year) throw fail('identity');
                 entry = await live(entry);
                 // Persist intent BEFORE the network call. A crash can only trigger a read, never a duplicate POST.
                 const sending = await changeEntry(entry.id, current => {
@@ -215,7 +217,7 @@
                 if (response.status >= 400 && response.status < 500) throw fail('rejected');
                 const result = response.data;
                 await changeEntry(entry.id, current => {
-                    if (result?.action === 'scrobble' && result.match === 'exact' && result.objectType === (M.isMovie(current.episode) ? 'movie' : 'episode')
+                    if (current.episode.imdb && result?.action === 'scrobble' && result.match === 'exact' && result.objectType === (M.isMovie(current.episode) ? 'movie' : 'episode')
                         && Number.isSafeInteger(result.objectId) && result.objectId > 0) {
                         current[M.isMovie(current.episode) ? 'movieId' : 'episodeId'] = result.objectId; current.exact = true;
                         if (Number.isSafeInteger(result.id)) current.scrobbleId = result.id;
@@ -298,8 +300,12 @@
         const tracking = await edit(state => {
             if (!state.enabled || state.connection !== 'connected' || state.account !== message.account) return;
             const key = M.mediaKey(episode);
+            if (M.isRemoved(state, key)) return false;
             let entry = state.entries.find(e => e.account === state.account && e.key === key);
             if (entry && entry.status !== 'watching') return false;
+            // Restoring tracking starts a new viewing. Delayed batches from any open
+            // tab must not re-credit the progress that was explicitly deleted.
+            if (entry?.trackingEpoch && message.trackingEpoch !== entry.trackingEpoch) return false;
             if (!entry) {
                 const id = crypto.randomUUID();
                 entry = { id, source: M.sourceFor(id), key, account: state.account, episode, url: url.origin + url.pathname,
@@ -323,6 +329,21 @@
         if (message.type === 'myshows:state') return { state: await read() };
         if (message.type === 'myshows:current') return { current: await currentMedia(message.tabId) };
         if (message.type === 'myshows:force') return force(message);
+        if (message.type === 'myshows:restore') return restoreTracking(message);
+        if (message.type === 'myshows:remove') {
+            return edit(state => {
+                const index = state.entries.findIndex(entry => entry.id === message.id && entry.account === state.account);
+                if (!message.account || message.account !== state.account || index < 0) return { error: 'Запись недоступна в подключённом аккаунте.' };
+                const entry = state.entries[index];
+                if (!M.canRemove(entry)) return { error: 'Удалить можно только отменённую запись без отправленного запроса в MyShows.' };
+                if (activeJob?.id === entry.id) return { error: 'Дождитесь завершения текущей проверки и повторите удаление.' };
+                // Retain only the account/media key so late player batches cannot recreate
+                // the cancelled request. Explicit restoration or a manual mark clears it.
+                if (!M.isRemoved(state, entry.key)) (state.removed ||= []).push({ account: entry.account, key: entry.key });
+                state.entries.splice(index, 1);
+                return { notice: 'Запись удалена из истории. Чтобы учитывать новый просмотр, нажмите «Возобновить учёт» в блоке текущего фильма или серии.' };
+            });
+        }
         if (message.type === 'myshows:reset') {
             return edit(state => {
                 const index = state.entries.findIndex(entry => entry.id === message.id && entry.account === state.account);
@@ -413,6 +434,26 @@
             return { tabId, episode, key, url: url.origin + url.pathname, playback };
         } catch { return null; }
     }
+    async function restoreTracking(message) {
+        const current = await currentMedia(message.tabId);
+        if (!current || current.key !== message.key) return { error: 'На странице выбран другой фильм или другая серия либо вкладка недоступна. Проверьте текущий просмотр и нажмите ещё раз.' };
+        return edit(state => {
+            if (state.connection !== 'connected') return { error: 'Сначала подключите MyShows.' };
+            if (!message.account || message.account !== state.account) return { error: 'Аккаунт изменился. Откройте раздел MyShows заново.' };
+            if (!M.isRemoved(state, current.key) || state.entries.some(entry => entry.account === state.account && entry.key === current.key)) {
+                return { error: 'Состояние просмотра изменилось. Проверьте его в панели.' };
+            }
+            const id = crypto.randomUUID();
+            const entry = { id, source: M.sourceFor(id), trackingEpoch: id, key: current.key, account: state.account,
+                episode: current.episode, url: current.url, createdAt: Date.now(), duration: 0, ranges: [],
+                progress: 0, watchedProgress: 0, confirmedPosition: 0, status: 'watching', events: [] };
+            M.transition(entry, 'watching', 'Учёт возобновлён после удаления записи. Начат новый просмотр.');
+            state.entries.push(entry);
+            state.removed = state.removed.filter(item => item.account !== state.account || item.key !== current.key);
+            return { notice: state.enabled ? 'Учёт возобновлён. Продолжайте просмотр — отметка появится при достижении порога.'
+                : 'Просмотр готов к учёту. Включите автоматические отметки в настройках MyShows.' };
+        });
+    }
     async function force(message) {
         // Never trust panel-supplied media metadata: obtain it from the actual top frame.
         const current = message.id ? null : await currentMedia(message.tabId);
@@ -423,6 +464,7 @@
             let entry = state.entries.find(e => e.account === state.account && (message.id ? e.id === message.id : e.key === current.key));
             if (message.id && !entry) return { error: 'Запись недоступна в подключённом аккаунте.' };
             if (!M.canForce(entry)) return { notice: entry.status === 'done' ? 'Просмотр уже отмечен в MyShows.' : 'Запись уже отправлена на синхронизацию. Следите за её статусом в списке.' };
+            if (state.removed) state.removed = state.removed.filter(item => item.account !== state.account || item.key !== (entry?.key || current.key));
             if (!entry) {
                 const id = crypto.randomUUID();
                 entry = { id, source: M.sourceFor(id), key: current.key, account: state.account, episode: current.episode, url: current.url,

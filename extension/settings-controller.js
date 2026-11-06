@@ -51,7 +51,7 @@ const RezkaSettings = {
             afterStart(() => setBodyClass(config, option));
             // Upstream installs handlers on activation. Installing them twice
             // would double keyboard actions; classes already gate their effects.
-            const once = ['hotkeys', 'font', 'snap-scroll'].includes(name);
+            const once = ['hotkeys', 'font'].includes(name);
             if (once && previous && previous !== config.options[0]) installedEffects.add(name);
             if (!once || !installedEffects.has(name)) {
                 run(option.start, afterStart, name);

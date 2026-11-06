@@ -83,12 +83,16 @@ const RezkaMyShowsPanel = (() => {
         retryCurrent.dataset.myshowsCurrent = 'retry';
         const resumeCurrent = button('Продолжить отслеживание', () => withCurrent('resume'));
         resumeCurrent.dataset.myshowsCurrent = 'resume';
+        const restoreCurrent = button('Возобновить учёт', () => {
+            if (current) command('restore', { tabId: current.tabId, key: current.key, account: state.account });
+        }, 'myshows-button myshows-primary');
+        restoreCurrent.dataset.myshowsCurrent = 'restore';
         const cancelCurrent = button('Отменить отправку', () => withCurrent('cancel'), 'text-button');
         cancelCurrent.dataset.myshowsCurrent = 'cancel';
         const resetCurrent = button('Сбросить запись', () => withCurrent('reset'), 'text-button');
         resetCurrent.dataset.myshowsCurrent = 'reset'; resetCurrent.title = resetHint;
         const currentLink = link('Проверить в MyShows', M.historyUrl);
-        const currentActions = element('div', 'myshows-actions'); currentActions.append(forceCurrent, retryCurrent, resumeCurrent, cancelCurrent, resetCurrent, currentLink);
+        const currentActions = element('div', 'myshows-actions'); currentActions.append(forceCurrent, restoreCurrent, retryCurrent, resumeCurrent, cancelCurrent, resetCurrent, currentLink);
         currentBody.append(currentTitle, currentProgress, progressTrack, confirmation, currentDescription, currentActions);
         currentSection.append(currentHeading, currentBody);
         const message = element('p', 'myshows-message'); message.setAttribute('role', 'status'); message.hidden = true;
@@ -212,6 +216,7 @@ const RezkaMyShowsPanel = (() => {
         function showCurrent() {
             const focused = currentSection.contains(document.activeElement) ? document.activeElement : null;
             const entry = currentEntry();
+            const removed = !entry && M.isRemoved(state, current?.key);
             const movie = M.isMovie(current?.episode);
             text(currentHeadingTitle, current ? (movie ? 'Текущий фильм' : 'Текущая серия') : 'Текущий просмотр');
             currentSection.setAttribute('aria-label', currentHeadingTitle.textContent);
@@ -228,12 +233,15 @@ const RezkaMyShowsPanel = (() => {
                 progressTrack.style.setProperty('--myshows-threshold', `${state.threshold}%`);
                 thresholdMarker.title = `Порог автоотметки: ${state.threshold}%`;
             }
-            const status = current ? statusText(entry) || (connected() && state.enabled ? 'Ожидаем просмотр' : 'Учёт на паузе') : 'Просмотр не выбран';
+            const status = current ? removed ? 'Удалено из истории' : statusText(entry) || (connected() && state.enabled ? 'Ожидаем просмотр' : 'Учёт на паузе') : 'Просмотр не выбран';
             describe(currentState, status); currentState.dataset.status = entry?.status || '';
             describe(currentDescription, !current ? 'Откройте фильм или серию на Rezka. Если страница уже открыта, проверьте её подключение вверху панели.'
                 : !connected() ? 'Подключите MyShows, чтобы учитывать просмотр фильмов и серий.'
+                : removed ? 'Автоотметка для этого просмотра остановлена. Нажмите «Возобновить учёт», чтобы учитывать новый просмотр. Старый прогресс не восстановится.'
                 : explanation(entry) || (entry ? '' : `Запустите просмотр или засчитайте ${movie ? 'фильм' : 'серию'} вручную.`));
             forceCurrent.hidden = !current || !M.canForce(entry) || entry?.status === 'attention'; forceCurrent.disabled = busy || !connected();
+            forceCurrent.classList.toggle('myshows-primary', !removed);
+            restoreCurrent.hidden = !removed; restoreCurrent.disabled = busy || !connected();
             retryCurrent.hidden = entry?.status !== 'attention'; retryCurrent.disabled = busy || !connected();
             text(retryCurrent, entry?.submittedAt ? 'Проверить' : 'Повторить');
             cancelCurrent.hidden = !M.canCancel(entry); cancelCurrent.disabled = busy;
@@ -242,7 +250,7 @@ const RezkaMyShowsPanel = (() => {
             resetCurrent.hidden = !M.canReset(entry); resetCurrent.disabled = busy;
             currentLink.hidden = !M.remoteId(entry) && !entry?.submittedAt; currentLink.href = M.watchUrl(entry);
             text(currentLink, entry?.status === 'done' ? mediaLinkText(entry) : 'Проверить в MyShows');
-            const playback = connected() && state.enabled && (!entry || entry.status === 'watching') ? current?.playback : null;
+            const playback = connected() && state.enabled && !removed && (!entry || entry.status === 'watching') ? current?.playback : null;
             let confirmationText = '', phase = '';
             if (playback) {
                 const complete = playback.seconds >= M.positionDelay;
@@ -308,13 +316,10 @@ const RezkaMyShowsPanel = (() => {
             const icons = element('div', 'myshows-entry-icons');
             const meta = element('div', 'myshows-entry-meta'); meta.append(identity, icons);
             const progress = element('p', 'myshows-description'), position = element('p', 'myshows-description'), reason = element('p', 'myshows-description');
-            const actions = element('div', 'myshows-actions');
-            const view = { row, title, episode, status, progress, position, reason, entry, actions, buttons: {} };
-            for (const [type, name] of [['resume', 'Продолжить отслеживание'], ['force', 'Засчитать серию'], ['retry', 'Проверить'], ['cancel', 'Отменить отправку'], ['reset', 'Сбросить запись']]) {
-                const node = button(name, () => command(type, { id: view.entry.id, account: state.account }), 'text-button');
-                if (type === 'reset') {
-                    node.className = 'myshows-icon-button'; icon(node, 'reset'); iconLabel(node, name, name + '. ' + resetHint);
-                } else actions.append(node);
+            const view = { row, title, episode, status, progress, position, reason, entry, buttons: {} };
+            for (const [type, name, symbol = type] of [['resume', 'Продолжить отслеживание'], ['force', 'Засчитать серию'], ['retry', 'Проверить', 'reset'], ['cancel', 'Отменить отправку', 'close'], ['reset', 'Сбросить запись'], ['remove', 'Удалить из истории']]) {
+                const node = button('', () => command(type, { id: view.entry.id, account: state.account }), 'myshows-icon-button');
+                icon(node, symbol); iconLabel(node, name, type === 'reset' ? name + '. ' + resetHint : name);
                 node.dataset.myshowsAction = entry.id + '-' + type; view.buttons[type] = node;
             }
             view.link = link('', M.watchUrl(entry)); view.link.className = 'myshows-icon-button'; icon(view.link, 'external');
@@ -323,28 +328,28 @@ const RezkaMyShowsPanel = (() => {
             view.infoButton.setAttribute('popovertarget', info.id);
             view.infoButton.setAttribute('aria-haspopup', 'dialog'); view.infoButton.setAttribute('aria-controls', info.id);
             view.infoButton.setAttribute('aria-expanded', 'false'); view.infoButton.dataset.myshowsInfo = entry.id;
-            icons.append(view.infoButton, view.link, view.buttons.reset);
-            row.append(meta, status, progress, position, reason, actions);
+            icons.append(view.infoButton, view.link, ...Object.values(view.buttons));
+            row.append(meta, status, progress, position, reason);
             return view;
         }
         function updateRowActions(view) {
             const { entry, buttons } = view;
-            text(buttons.force, M.isMovie(entry.episode) ? 'Засчитать фильм' : 'Засчитать серию');
+            iconLabel(buttons.force, M.isMovie(entry.episode) ? 'Засчитать фильм' : 'Засчитать серию');
             buttons.resume.hidden = !M.canResume(entry); buttons.force.hidden = !M.canForce(entry);
             buttons.retry.hidden = entry.status !== 'attention'; buttons.cancel.hidden = !M.canCancel(entry);
             buttons.reset.hidden = !M.canReset(entry);
-            text(buttons.retry, entry.submittedAt ? 'Проверить' : 'Повторить');
-            text(buttons.cancel, entry.submittedAt ? 'Остановить синхронизацию' : 'Отменить отправку');
-            for (const [type, node] of Object.entries(buttons)) node.disabled = busy || (!['cancel', 'reset'].includes(type) && !connected());
+            buttons.remove.hidden = !M.canRemove(entry);
+            iconLabel(buttons.retry, entry.submittedAt ? 'Проверить' : 'Повторить');
+            iconLabel(buttons.cancel, entry.submittedAt ? 'Остановить синхронизацию' : 'Отменить отправку');
+            for (const [type, node] of Object.entries(buttons)) node.disabled = busy || (!['cancel', 'reset', 'remove'].includes(type) && !connected());
             view.link.hidden = !M.remoteId(entry) && !entry.submittedAt && entry.status !== 'done'; view.link.href = M.watchUrl(entry);
             iconLabel(view.link, M.remoteId(entry) ? mediaLinkText(entry) : 'Открыть историю в MyShows');
-            view.actions.hidden = ['resume', 'force', 'retry', 'cancel'].every(type => buttons[type].hidden);
         }
         function updateRow(view, entry) {
             view.entry = entry;
             text(view.title, entry.episode.title); view.title.title = entry.episode.title; text(view.episode, M.label(entry.episode));
             text(view.status, statusText(entry)); view.status.dataset.status = entry.status;
-            view.status.hidden = entry.status === 'done';
+            view.status.hidden = M.terminal.has(entry.status);
             view.infoButton.dataset.status = entry.status;
             view.infoIcon.setAttribute('href', entry.status === 'done' ? '#myshows-done' : '#myshows-history');
             iconLabel(view.infoButton, `Сведения об отметке: ${entry.episode.title} · ${M.label(entry.episode)}. ${statusText(entry)}`,
@@ -352,7 +357,7 @@ const RezkaMyShowsPanel = (() => {
             describe(view.progress, entry.status === 'watching' ? progressText(entry) : '');
             describe(view.position, entry.status === 'watching' && entry.confirmedPosition > 0 && entry.progress > entry.watchedProgress
                 ? 'По позиции плеера, подтверждённой просмотром' : '');
-            describe(view.reason, entry.status === 'done' ? '' : explanation(entry));
+            describe(view.reason, M.terminal.has(entry.status) ? '' : explanation(entry));
             updateRowActions(view);
         }
         function renderList() {

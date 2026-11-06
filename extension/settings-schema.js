@@ -57,29 +57,6 @@ const REZKA_SETTINGS = [
     ]
   },
   {
-    "name": "player-scale",
-    "label": "Масштабирование",
-    "group": "Плеер",
-    "defaultIndex": 0,
-    "options": [
-      {
-        "text": "1x",
-        "value": "r4-player-scale-1-0-x",
-        "reload": true
-      },
-      {
-        "text": "1.5x",
-        "value": "r4-player-scale-1-5-x",
-        "reload": false
-      },
-      {
-        "text": "2x",
-        "value": "r4-player-scale-2-0-x",
-        "reload": false
-      }
-    ]
-  },
-  {
     "name": "player-no-margin",
     "label": "Без отступов",
     "group": "Плеер",
@@ -168,7 +145,7 @@ const REZKA_SETTINGS = [
   },
   {
     "name": "dim-watched",
-    "label": "Приглушать просмотренное",
+    "label": "Различать статусы просмотра",
     "group": "Интерфейс",
     "defaultIndex": 1,
     "options": [
@@ -180,6 +157,39 @@ const REZKA_SETTINGS = [
       {
         "text": "Вкл",
         "value": true,
+        "reload": false
+      }
+    ]
+  },
+  {
+    "name": "search-candidate-limit",
+    "label": "Лимит проверки карточек",
+    "group": "Поиск",
+    "defaultIndex": 2,
+    "options": [
+      {
+        "text": "1 000",
+        "value": 1000,
+        "reload": false
+      },
+      {
+        "text": "5 000",
+        "value": 5000,
+        "reload": false
+      },
+      {
+        "text": "10 000",
+        "value": 10000,
+        "reload": false
+      },
+      {
+        "text": "25 000",
+        "value": 25000,
+        "reload": false
+      },
+      {
+        "text": "50 000",
+        "value": 50000,
         "reload": false
       }
     ]
@@ -316,42 +326,6 @@ const REZKA_SETTINGS = [
     ]
   },
   {
-    "name": "player-triple-click",
-    "label": "Переключение серий тройным кликом",
-    "group": "Плеер",
-    "defaultIndex": 0,
-    "options": [
-      {
-        "text": "Выкл",
-        "value": "r4-player-triple-click-disabled",
-        "reload": false
-      },
-      {
-        "text": "Вкл",
-        "value": "r4-player-triple-click-enabled",
-        "reload": false
-      }
-    ]
-  },
-  {
-    "name": "player-full-page",
-    "label": "Автоматическое разворачивание",
-    "group": "Плеер",
-    "defaultIndex": 0,
-    "options": [
-      {
-        "text": "Выкл",
-        "value": "r4-player-full-page-disabled",
-        "reload": false
-      },
-      {
-        "text": "Вкл",
-        "value": "r4-player-full-page-enabled",
-        "reload": false
-      }
-    ]
-  },
-  {
     "name": "theme-color-black",
     "label": "Черная цветовая схема браузера",
     "group": "Интерфейс",
@@ -370,27 +344,9 @@ const REZKA_SETTINGS = [
     ]
   },
   {
-    "name": "hide-info",
-    "label": "Описание",
-    "group": "Автоматическое сворачивание",
-    "defaultIndex": 0,
-    "options": [
-      {
-        "text": "Выкл",
-        "value": "r4-hide-info-disabled",
-        "reload": false
-      },
-      {
-        "text": "Вкл",
-        "value": "r4-hide-info",
-        "reload": false
-      }
-    ]
-  },
-  {
     "name": "comments-hide",
     "label": "Отзывы",
-    "group": "Автоматическое сворачивание",
+    "group": "Интерфейс",
     "defaultIndex": 0,
     "options": [
       {
@@ -401,42 +357,6 @@ const REZKA_SETTINGS = [
       {
         "text": "Вкл",
         "value": "r4-comments-hide-enabled",
-        "reload": false
-      }
-    ]
-  },
-  {
-    "name": "more-hide",
-    "label": "Смотреть еще",
-    "group": "Автоматическое сворачивание",
-    "defaultIndex": 0,
-    "options": [
-      {
-        "text": "Выкл",
-        "value": "r4-more-hide-disabled",
-        "reload": false
-      },
-      {
-        "text": "Вкл",
-        "value": "r4-more-hide",
-        "reload": false
-      }
-    ]
-  },
-  {
-    "name": "translators",
-    "label": "Список переводов",
-    "group": "Автоматическое сворачивание",
-    "defaultIndex": 0,
-    "options": [
-      {
-        "text": "Выкл",
-        "value": "r4-translators-hide-disabled",
-        "reload": false
-      },
-      {
-        "text": "Вкл",
-        "value": "r4-translators-hide-enabled",
         "reload": false
       }
     ]
@@ -496,42 +416,6 @@ const REZKA_SETTINGS = [
       {
         "text": "Вкл",
         "value": "r4-hide-countries-invert-enabled",
-        "reload": false
-      }
-    ]
-  },
-  {
-    "name": "snap-scroll",
-    "label": "Прилипание при прокрутке",
-    "group": "Плеер",
-    "defaultIndex": 0,
-    "options": [
-      {
-        "text": "Выкл",
-        "value": "r4-snap-scroll-disabled",
-        "reload": true
-      },
-      {
-        "text": "Вкл",
-        "value": "r4-snap-scroll",
-        "reload": false
-      }
-    ]
-  },
-  {
-    "name": "snap-scroll-onload",
-    "label": "Автопрокрутка при загрузке",
-    "group": "Плеер",
-    "defaultIndex": 0,
-    "options": [
-      {
-        "text": "Выкл",
-        "value": "r4-snap-scroll-onload-disabled",
-        "reload": false
-      },
-      {
-        "text": "Вкл",
-        "value": "r4-snap-scroll-onload",
         "reload": false
       }
     ]
